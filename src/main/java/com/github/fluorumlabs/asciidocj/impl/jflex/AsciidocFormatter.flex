@@ -36,8 +36,11 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
     /**
      * Parse the Asciidoc paragraph/block and return a resulting Document
      *
+     * @param text       Asciidoc
+     * @param properties Properties
+     * @param attributes Attributes
      * @return JSoup Document
-     * @throws ParserException
+     * @throws ParserException if there was an unrecoverable error
      */
     public Document parse(String text, JSONObject properties, JSONObject attributes) throws ParserException {
         this.properties = properties;
@@ -132,7 +135,7 @@ Properties                  = "[" ~ "]"
                 String text = yytext();
                 String toFormat = extractQuoted(text, '_');
                 if (toFormat.isEmpty()) {
-                    appendText("*");
+                    appendText("_");
                     yypushback(yytext().length() - 1);
                 } else {
                     openElement("em");
@@ -148,12 +151,26 @@ Properties                  = "[" ~ "]"
                 String text = yytext();
                 String toFormat = extractQuoted(text, '#');
                 if (toFormat.isEmpty()) {
-                    appendText("*");
+                    appendText("#");
                     yypushback(yytext().length() - 1);
                 } else {
                     openElement("mark");
                     appendFormatted(toFormat);
                     closeElement("mark");
+                    yypushback(text.length() - toFormat.length() - 2);
+                    yybegin(INSIDE_WORD);
+                }
+            }
+
+    "+" [^\s+] .*
+    {
+                String text = yytext();
+                String toFormat = extractQuoted(text, '+');
+                if (toFormat.isEmpty()) {
+                    appendText("+");
+                    yypushback(yytext().length() - 1);
+                } else {
+                    appendText(toFormat);
                     yypushback(text.length() - toFormat.length() - 2);
                     yybegin(INSIDE_WORD);
                 }
@@ -196,7 +213,7 @@ Properties                  = "[" ~ "]"
             }
 
     /* Vars */
-    "{" [a-zA-Z_]+ "}"
+    "{" [0-9a-zA-Z_]+ "}"
     {
                 String id = strip(yytext(), 1, 1);
                 if (attributes.has(id)) {
@@ -221,6 +238,11 @@ Properties                  = "[" ~ "]"
                     }
                 }
             }
+
+    "pass:c[" [^\]]+ "]"
+    {
+          appendText(extractBetween(yytext(), "[", "]"));
+      }
 
    "[[" {NoLineFeed}+ "]]" |
    "anchor:" [^\[][^\]]+ {Properties}?
@@ -482,13 +504,6 @@ Properties                  = "[" ~ "]"
     }*/
 
     /* Character substitutes */
-    \w "'" / \w
-    {
-                appendText(yytext().substring(0, 1));
-                appendText("\u2019");
-                yybegin(YYINITIAL);
-            }
-
     "..."
     {
                 appendText("…\u200B");
@@ -524,7 +539,7 @@ Properties                  = "[" ~ "]"
                 appendText(entity.isEmpty() ? yytext() : entity);
             }
 
-    [\w]
+    [\p{Letter}\p{Digit}]+
     {
                 appendText(yytext());
                 yybegin(INSIDE_WORD);
@@ -540,5 +555,12 @@ Properties                  = "[" ~ "]"
     {
                 appendText(yytext());
                 yybegin(YYINITIAL);
+            }
+}
+
+<INSIDE_WORD> {
+    "'" / [\p{Letter}\p{Digit}]+
+    {
+                appendText("\u2019");
             }
 }

@@ -43,7 +43,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
      *
      * @param text Asciidoc
      * @return JSoup Document
-     * @throws ParserException
+     * @throws ParserException if there was an unrecoverable error
      */
     public Document parse(String text) throws ParserException {
         parse(text, null, null);
@@ -57,7 +57,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
      * @param text       Asciidoc
      * @param attributes JSONObject holding Asciidoc attributes
      * @return JSoup Document
-     * @throws ParserException
+     * @throws ParserException if there was an unrecoverable error
      */
     public Document parse(String text, JSONObject attributes) throws ParserException {
         parse(text, null, attributes);
@@ -72,7 +72,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
      * @param properties Properties
      * @param attributes Attributes
      * @return JSoup Document
-     * @throws ParserException
+     * @throws ParserException if there was an unrecoverable error
      */
     private Document parse(String text, JSONObject properties, JSONObject attributes) throws ParserException {
         if (properties != null) {
@@ -99,7 +99,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
     /**
      * Format collected text and append to current element
      *
-     * @throws ParserException
+     * @throws ParserException if there was an unrecoverable error
      */
     private void appendFormatted() throws ParserException {
         if (formatter == null) formatter = new AsciidocFormatter();
@@ -110,7 +110,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
      * Format text
      * @param text text to format
      * @return Document containing resulting DOM tree
-     * @throws ParserException
+     * @throws ParserException if there was an unrecoverable error
      */
     private Document getFormatted(String text) throws ParserException {
         if (formatter == null) formatter = new AsciidocFormatter();
@@ -120,7 +120,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
     /**
      * Format text and append to current element
      * @param text text to format
-     * @throws ParserException
+     * @throws ParserException if there was an unrecoverable error
      */
     private void appendFormatted(String text) throws ParserException {
         if (formatter == null) formatter = new AsciidocFormatter();
@@ -130,7 +130,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
     /**
      * Parse sub-document and append to current element
      * @param text asciidoc of sub-document
-     * @throws ParserException
+     * @throws ParserException if there was an unrecoverable error
      */
     private void appendSubdocument(String text) throws ParserException {
         AsciidocDocumentParser parser = new AsciidocDocumentParser();

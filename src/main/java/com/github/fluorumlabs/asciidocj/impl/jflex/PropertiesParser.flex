@@ -36,8 +36,9 @@ import java.io.StringReader;
     /**
     * Parse the PlainText and return a resulting Document
     *
-    * @return
-    * @throws IOException
+    * @param text Properties block
+    * @param p Properties JSONObject that will receive parsed output
+    * @return Properties JSONObject
     */
     public static JSONObject parse(String text, JSONObject p) {
         try(StringReader reader = new StringReader(text)) {

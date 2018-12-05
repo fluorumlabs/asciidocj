@@ -1,0 +1,19 @@
+The __kernel qualifier can be used with the __attribute__ keyword...
+
+// This works properly in asciidocj
+// #`CB###2`# and #`CB###3`#
+
+:dbl_: __
+:3H: ###
+
+The {dbl_}kernel qualifier can be used with the {dbl_}attribute{dbl_} keyword...
+
+#`CB{3H}2`# and #`CB{3H}3`#
+
+The +__kernel+ qualifier can be used with the +__attribute__+ keyword...
+
+#`+CB###2+`# and #`+CB###3+`#
+
+The pass:c["__kernel]"] qualifier can be used with the pass:c[__attribute__] keyword...
+
+#`pass:c[CB###2]`# and #`pass:c[CB###3]`#

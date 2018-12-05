@@ -42,10 +42,19 @@ AsciiDocument parsedAsciidoc = AsciiDocument.from(asciidoc);
    - Get `<body>` element of JSoup Document: `parsedAsciidoc.getDocumentBody()`
    - Get asciidoc attributes: `parsedAsciidoc.getAttributesAsJSON()` and `parsedAsciidoc.getAttributesAsProperties()`
 
-## Limitations/Differences from AsciidoctorJ
+## Supported features
 
 See [asciidocj test suite](https://github.com/fluorumlabs/asciidocj/tree/master/src/test/resources/com/github/fluorumlabs/asciidocj/tests) 
-for the list of verified features. 
+for the list of verified supported features. The verification is performed by comparing output of `asciidocj` with the output of
+`AsciidoctorJ`. The following AsciidoctorJ settings are used: 
+```
+backend = html5
+headerFooter = false
+
+showtitle = true
+```
+
+## Limitations
 
 - Pass-through blocks (`++++`) are considered as blocks: all non closed html tags are closed automatically. This means that they
   can't be used to create complex HTML layouts.
