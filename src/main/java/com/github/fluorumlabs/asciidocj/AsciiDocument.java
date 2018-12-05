@@ -34,6 +34,10 @@ public class AsciiDocument {
         return new AsciiDocument(asciidoc, attributes);
     }
 
+    public Document getDocument() {
+        return document;
+    }
+
     public Element getDocumentBody() {
         return document.body();
     }
