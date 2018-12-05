@@ -1,8 +1,8 @@
 # Asciidoc to HTML renderer
 
 
-![Maven metadata URL](https://img.shields.io/maven-metadata/v/http/oss.sonatype.org/content/groups/public/com/github/fluorumlabs/asciidocj/maven-metadata.xml.svg) 
-![GitHub](https://img.shields.io/github/license/fluorumlabs/asciidocj.svg)
+[![Maven metadata URL](https://img.shields.io/maven-metadata/v/http/oss.sonatype.org/content/groups/public/com/github/fluorumlabs/asciidocj/maven-metadata.xml.svg)](https://oss.sonatype.org/content/groups/public/com/github/fluorumlabs/asciidocj/) 
+[![GitHub](https://img.shields.io/github/license/fluorumlabs/asciidocj.svg)](https://github.com/fluorumlabs/asciidocj/blob/master/LICENSE)
  [![Build Status](https://travis-ci.com/fluorumlabs/asciidocj.svg?branch=master)](https://travis-ci.com/fluorumlabs/asciidocj) 
 
 ## What?
