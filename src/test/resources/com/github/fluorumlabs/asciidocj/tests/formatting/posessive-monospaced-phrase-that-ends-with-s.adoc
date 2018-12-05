@@ -1,0 +1,1 @@
+This ``class```' static methods make it easy to operate on files and directories.

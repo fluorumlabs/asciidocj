@@ -146,6 +146,7 @@ Whitespace					= " "|"\t"
 NoLineFeed                  = [^\r\n\u2028\u2029\u000B\u000C\u0085\0]
 
 Properties                  = "[" [\]]* "]" {Whitespace}*
+AttributeName               = [A-Za-z0-9_][A-Za-z0-9_-]*
 
 AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 
@@ -194,7 +195,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     {
             }
 
-    ":" [A-Za-z0-9_]+ ":" {NoLineFeed}* {Whitespace}+ / "//"
+    ":" {AttributeName} ":" {NoLineFeed}* {Whitespace}+ / "//"
     {
                 String[] parts = yytext().split(":", 3);
                 String value = trimAll(parts[2]);
@@ -202,10 +203,10 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 attributes.put(parts[1], value);
             }
 
-    ":" [A-Za-z0-9_]+ ":" {NoLineFeed}* {LineFeed}
+    ":" {AttributeName} ":" ({NoLineFeed}* "\\" {LineFeed})* {NoLineFeed}* {LineFeed}
     {
                 String[] parts = yytext().split(":", 3);
-                String value = trimAll(parts[2]);
+                String value = trimAll(parts[2]).replaceAll("\\\\(\\R)","\\1");
 
                 attributes.put(parts[1], value);
             }
@@ -370,6 +371,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                     properties = props;
                 }
                 Document formattedTitle = getFormatted(title);
+                String formattedTitleString = formattedTitle.body().html();
 
                 if (!id.isEmpty()) {
                     attributes.put("anchor:" + id, formattedTitle.body().html());
@@ -380,6 +382,9 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 closeElement(AsciidocRenderer.HEADER);
 
                 if (level == 1) {
+                    if ( !attributes.has("doctitle") ) {
+                        attributes.put("doctitle", formattedTitleString);
+                    }
                     yybegin(SKIP);
                 }
             }
@@ -462,8 +467,8 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 yybegin(LIST_PARAGRAPH);
             }
 
-    {Whitespace}* {NoLineFeed}+ [:]{2,5} {Whitespace} |
-    {Whitespace}* {NoLineFeed}+ [:]{2,5} {LineFeed}
+    {Whitespace}* [^\r\n\u2028\u2029\u000B\u000C\u0085\0:] {NoLineFeed}* [:]{2,5} {Whitespace} |
+    {Whitespace}* [^\r\n\u2028\u2029\u000B\u000C\u0085\0:] {NoLineFeed}* [:]{2,5} {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
 
@@ -692,7 +697,8 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     {LineFeed}? {Whitespace}* ([1-9][0-9]*)? [.]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
     {LineFeed}? {Whitespace}* {NoLineFeed}+ [:]{2,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
     {LineFeed}? {Whitespace}* {NoLineFeed}+ [:]{2,5} {LineFeed} |
-    {LineFeed}? "<" [1-9][0-9]* ">" {Whitespace} {NoLineFeed}+ {LineFeed}
+    {LineFeed}? "<" [1-9][0-9]* ">" {Whitespace} {NoLineFeed}+ {LineFeed} |
+    {LineFeed}? ":" {AttributeName} ":"
     {
                 yypushback(yytext().length());
                 appendFormatted();

@@ -1,0 +1,1 @@
+The section <<images>> describes how to insert images into your document.

@@ -1,0 +1,1 @@
+[#bookmark-b]#Inline anchors can be applied to a phrase like this one.#

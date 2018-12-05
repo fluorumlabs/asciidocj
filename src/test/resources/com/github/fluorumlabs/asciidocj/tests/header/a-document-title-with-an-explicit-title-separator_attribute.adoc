@@ -1,0 +1,2 @@
+= Main Title:: Subtitle
+:title-separator: ::

@@ -1,0 +1,5 @@
+= Document Title
+:author_name: ACME Industries
+:author_email: info@acme.com
+:author: {author_name}
+:email: {author_email}

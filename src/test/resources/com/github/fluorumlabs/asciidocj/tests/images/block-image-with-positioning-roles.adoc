@@ -1,0 +1,2 @@
+[.right.text-center]
+image::tiger.png[Tiger,200,200]

@@ -1,0 +1,9 @@
+[.left]
+.Image A
+image::a.png[A,240,180]
+
+[.left]
+.Image B
+image::b.png[B,240,180,title="Image B"]
+
+Text below images.

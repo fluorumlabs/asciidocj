@@ -1,0 +1,17 @@
+|===
+|Source Code 1 |Source Code 2
+
+a|
+[source,python]
+----
+import os
+print "%s" %(os.uname())
+----
+
+a|
+[source,python]
+----
+import os
+print ("%s" %(os.uname()))
+----
+|===

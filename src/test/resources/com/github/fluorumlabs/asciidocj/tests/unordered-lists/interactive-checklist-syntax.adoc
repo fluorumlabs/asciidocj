@@ -1,0 +1,5 @@
+[%interactive]
+* [*] checked
+* [x] also checked
+* [ ] not checked
+*     normal list item

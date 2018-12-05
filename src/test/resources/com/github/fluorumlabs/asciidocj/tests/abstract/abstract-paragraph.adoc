@@ -1,0 +1,7 @@
+= Article Title
+
+[abstract]
+.Abstract
+Documentation is a distillation of many long, squiggly adventures.
+
+== First Section

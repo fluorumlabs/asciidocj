@@ -1,0 +1,1 @@
+``npm```'s job is to manage the dependencies for your application.

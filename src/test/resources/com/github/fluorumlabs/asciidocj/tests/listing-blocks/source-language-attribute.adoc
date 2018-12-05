@@ -1,0 +1,13 @@
+:source-language: java
+
+[source]
+----
+public void setAttributes(Attributes attributes) {
+    this.options.put(ATTRIBUTES, attributes.map());
+}
+----
+
+You can override the global source language by specifying a source language on the block.
+
+[source,ruby]
+require 'sinatra'

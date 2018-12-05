@@ -1,0 +1,1 @@
+[[bookmark-a]]Inline anchors make arbitrary content referenceable.

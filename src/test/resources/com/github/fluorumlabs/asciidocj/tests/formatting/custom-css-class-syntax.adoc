@@ -1,0 +1,1 @@
+Type the word [.userinput]#asciidoctor# into the search bar.

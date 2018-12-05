@@ -1,0 +1,5 @@
+I, King Arthur.
+indexterm:[knight, "Arthur, King"]
+
+I, King Arthur.
+(((knight, "Arthur, King")))

@@ -1,0 +1,2 @@
+.A walkthrough of the product
+video::video_file.mp4[]

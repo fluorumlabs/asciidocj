@@ -1,0 +1,4 @@
+:title-separator: {sp}|
+= The Dangerous and Thrilling Documentation Chronicles | A Tale of Caffeine and Words
+
+It began on a bleary Monday morning.

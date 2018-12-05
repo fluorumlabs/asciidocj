@@ -1,0 +1,12 @@
+= Article Title
+
+[abstract]
+.Optional Abstract Title
+--
+This article will take you on a wonderful adventure of knowledge.
+
+You'll start with the basics.
+Beyond that, where you go is up to you.
+--
+
+Your journey begins here.

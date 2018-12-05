@@ -1,0 +1,3 @@
+pass:[content like #{variable} passed directly to the output] followed by normal content.
+
+content with only select substitutions applied: pass:c,a[__<{email}>__]

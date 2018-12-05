@@ -1,0 +1,4 @@
+= Asciidoctor Document Title
+:linkattrs:
+
+Let's view the raw HTML of the link:view-source:asciidoctor.org[Asciidoctor homepage, window="_blank"].

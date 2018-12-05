@@ -1,0 +1,14 @@
+= Document Title (Level 0)
+:sectids!:
+
+== Level 1 Section Title
+
+=== Level 2 Section Title
+
+==== Level 3 Section Title
+
+===== Level 4 Section Title
+
+====== Level 5 Section Title
+
+== Another Level 1 Section Title

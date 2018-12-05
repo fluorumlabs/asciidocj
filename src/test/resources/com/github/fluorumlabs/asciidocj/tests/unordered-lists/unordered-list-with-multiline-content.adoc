@@ -1,0 +1,9 @@
+* The header in AsciiDoc is optional, but if
+it is used it must start with a document title.
+
+* Optional Author and Revision information
+immediately follows the header title.
+
+* The document header must be separated from
+  the remainder of the document by one or more
+  blank lines and cannot contain blank lines.

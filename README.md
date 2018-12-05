@@ -5,7 +5,7 @@
 ## What?
 
 `asciidocj` is a _faster_ lightweight lexer-based Asciidoc processor
-outputting Jsoup DOM or plain HTML.
+outputting Jsoup DOM or plain HTML for Java
 
 ## Why?
 
@@ -56,6 +56,9 @@ showtitle = true
 
 ## Limitations
 
+- Boundaries of delimited blocks can be unbalanced (see https://asciidoctor.org/docs/user-manual/#delimiter-lines)
+- Support for block nesting is limited
+- Number of mark characters represent list depth
 - Pass-through blocks (`++++`) are considered as blocks: all non closed html tags are closed automatically. This means that they
   can't be used to create complex HTML layouts.
 

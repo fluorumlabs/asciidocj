@@ -1,0 +1,7 @@
+\*Stars* will appear as *Stars*, not as bold text.
+
+\&sect; will appear as an entity, not the &sect; symbol.
+
+\\__func__ will appear as __func__, not as emphasized text.
+
+\{two-semicolons} will appear {two-semicolons}, not resolved as ;;.

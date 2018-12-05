@@ -1,0 +1,1 @@
+image:logo.png[role="related thumb right"] Here's text that will wrap around the image to the left.

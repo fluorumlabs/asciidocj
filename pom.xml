@@ -6,7 +6,7 @@
 
     <groupId>com.github.fluorumlabs</groupId>
     <artifactId>asciidocj</artifactId>
-    <version>1.0.0-alpha1</version>
+    <version>1.0.0-alpha2</version>
 
     <name>asciidocj</name>
     <description>Fast lightweight lexer-based Asciidoc to HTML/Jsoup renderer</description>
@@ -138,6 +138,7 @@
 
                             <attributes>
                                 <showtitle>true</showtitle>
+                                <experimental>true</experimental>
                             </attributes>
                         </configuration>
                     </execution>
@@ -160,10 +161,6 @@
                                 <resource>
                                     <directory>${project.build.directory}/generated-test-resources/resources/
                                     </directory>
-                                    <filtering>true</filtering>
-                                </resource>
-                                <resource>
-                                    <directory>${project.build.directory}/tmp/learning-content/</directory>
                                     <filtering>true</filtering>
                                 </resource>
                             </resources>

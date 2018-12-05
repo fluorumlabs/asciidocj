@@ -1,0 +1,5 @@
+[cols=2*]
+|====
+|The default separator in PSV tables is the \| character.
+|The \| character is often referred to as a "`pipe`".
+|====

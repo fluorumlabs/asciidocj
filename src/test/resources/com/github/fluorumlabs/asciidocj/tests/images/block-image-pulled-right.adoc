@@ -1,0 +1,1 @@
+image::tiger.png[Tiger,200,200,float="right",align="center"]

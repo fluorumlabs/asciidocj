@@ -1,0 +1,10 @@
+. {blank}
++
+----
+print("one")
+----
+. {blank}
++
+----
+print("one")
+----

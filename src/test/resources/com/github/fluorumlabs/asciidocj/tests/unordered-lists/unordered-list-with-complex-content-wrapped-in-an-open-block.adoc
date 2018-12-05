@@ -1,0 +1,11 @@
+* The header in AsciiDoc must start with a document title.
++
+--
+Here's an example of a document title:
+
+----
+= Document Title
+----
+
+NOTE: The header is optional.
+--

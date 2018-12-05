@@ -1,0 +1,6 @@
+:xrefstyle: basic
+
+[reftext="Installation Procedure"]
+=== Installation
+
+<<Installation>>

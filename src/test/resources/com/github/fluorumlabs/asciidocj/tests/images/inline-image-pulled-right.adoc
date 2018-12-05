@@ -1,0 +1,2 @@
+image:linux.png[Linux,150,150,float="right"]
+You can find Linux everywhere these days!

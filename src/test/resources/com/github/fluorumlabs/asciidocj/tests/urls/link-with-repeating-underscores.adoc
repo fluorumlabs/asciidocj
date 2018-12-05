@@ -1,0 +1,6 @@
+This URL has repeating underscores https://asciidoctor.org/now_this__link_works.html.
+
+This URL has repeating underscores pass:macros[https://asciidoctor.org/now_this__link_works.html].
+
+This URL has repeating underscores link:++https://asciidoctor.org/now_this__link_works.html++[].
+

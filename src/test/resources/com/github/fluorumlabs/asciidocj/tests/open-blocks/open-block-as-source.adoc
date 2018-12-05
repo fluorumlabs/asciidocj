@@ -1,0 +1,4 @@
+[source]
+--
+puts "I'm a source block!"
+--

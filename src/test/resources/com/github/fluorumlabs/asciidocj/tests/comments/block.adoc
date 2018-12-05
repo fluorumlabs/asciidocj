@@ -1,0 +1,5 @@
+////
+A multi-line comment.
+
+Notice it's a delimited block.
+////

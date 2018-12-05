@@ -1,0 +1,1 @@
+You can reference the value of a document attribute using the syntax `+{name}+`, where `name` is the attribute name.

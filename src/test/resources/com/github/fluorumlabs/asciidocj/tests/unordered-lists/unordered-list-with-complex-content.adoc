@@ -1,0 +1,15 @@
+* The header in AsciiDoc must start with a document title.
++
+----
+= Document Title
+----
++
+Keep in mind that the header is optional.
+
+* Optional Author and Revision information immediately follows the header title.
++
+----
+= Document Title
+Doc Writer <doc.writer@asciidoc.org>
+v1.0, 2013-01-01
+----

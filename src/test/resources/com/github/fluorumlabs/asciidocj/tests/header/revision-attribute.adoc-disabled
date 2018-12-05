@@ -1,0 +1,16 @@
+= The Dangerous and Thrilling Documentation Chronicles
+Kismet Chameleon <kismet@asciidoctor.org>
+:revnumber: 1.0
+:revdate: 10-02-2013
+:revremark: The first incarnation of {doctitle}
+:version-label!:
+
+This journey begins...
+
+== Colophon
+
+Version: {revnumber}
+
+Version Date: {revdate}
+
+Version Notes: {revremark}

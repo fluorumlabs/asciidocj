@@ -1,0 +1,18 @@
+= Article Title
+:appendix-caption: Appx
+:sectnums:
+:toc:
+
+== First Section
+
+=== Subsection
+
+[appendix]
+== First Appendix
+
+=== First Subsection
+
+=== Second Subsection
+
+[appendix]
+== Second Appendix

@@ -1,0 +1,7 @@
+= The Dangerous and Thrilling Documentation Chronicles
+Kismet Rainbow Chameleon <kismet@asciidoctor.org>; Lazarus het_Draeke <lazarus@asciidoctor.org>
+:description: A story chronicling the inexplicable hazards and vicious beasts a \
+documentation team must surmount and vanquish on their journey to finding an \
+open source project's true power.
+
+This journey begins on a bleary Monday morning.

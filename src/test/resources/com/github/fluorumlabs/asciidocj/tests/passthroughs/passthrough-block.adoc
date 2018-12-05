@@ -1,0 +1,5 @@
+++++
+<video poster="images/movie-reel.png">
+  <source src="videos/writing-zen.webm" type="video/webm">
+</video>
+++++

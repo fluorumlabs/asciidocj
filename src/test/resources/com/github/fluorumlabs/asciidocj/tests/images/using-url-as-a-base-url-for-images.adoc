@@ -1,0 +1,6 @@
+:imagesdir-old: {imagesdir}
+:imagesdir: https://upload.wikimedia.org/wikipedia/commons
+
+image::3/35/Tux.svg[Tux,250,350]
+
+:imagesdir: {imagesdir-old}

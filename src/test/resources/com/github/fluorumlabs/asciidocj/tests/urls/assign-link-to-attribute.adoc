@@ -1,0 +1,4 @@
+= Document Title
+:link-with-underscores: https://asciidoctor.org/now_this__link_works.html
+
+This URL has repeating underscores {link-with-underscores}.

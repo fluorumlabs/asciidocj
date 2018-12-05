@@ -1,0 +1,29 @@
+[cols=3*, stripes=none]
+|===
+| A1
+| B1
+| C1
+
+| A2
+| B2
+| C2
+
+| A3
+| B3
+| C3
+|===
+
+[.stripes-none,cols=3*]
+|===
+| A1
+| B1
+| C1
+
+| A2
+| B2
+| C2
+
+| A3
+| B3
+| C3
+|===

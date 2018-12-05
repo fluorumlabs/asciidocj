@@ -1,0 +1,1 @@
+Let's view the raw HTML of the link:view-source:asciidoctor.org[Asciidoctor homepage^].

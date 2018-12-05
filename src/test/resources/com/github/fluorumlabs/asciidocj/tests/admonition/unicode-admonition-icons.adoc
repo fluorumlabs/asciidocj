@@ -1,0 +1,9 @@
+:tip-caption: 💡
+
+[TIP]
+It's possible to use Unicode glyphs as admonition icons.
+
+:tip-caption: pass:[&#128161;]
+
+[TIP]
+It's possible to use Unicode glyphs as admonition icons.

@@ -1,0 +1,5 @@
+= Line Break Doc Title
+:hardbreaks:
+
+Rubies are red,
+Topazes are blue.

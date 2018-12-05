@@ -107,6 +107,7 @@ URL                         = "http" [s]? "://" {URLDomainPartWithLocalhost} [-a
 
 NoLineFeed                  = [^\r\n\u2028\u2029\u000B\u000C\u0085\0]
 
+AttributeName               = [A-Za-z0-9_][A-Za-z0-9_-]*
 Properties                  = "[" ~ "]"
 
 %state INSIDE_WORD
@@ -213,7 +214,7 @@ Properties                  = "[" ~ "]"
             }
 
     /* Vars */
-    "{" [0-9a-zA-Z_]+ "}"
+    "{" {AttributeName} "}"
     {
                 String id = strip(yytext(), 1, 1);
                 if (attributes.has(id)) {
