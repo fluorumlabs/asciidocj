@@ -1,0 +1,11 @@
+"```endpoints```"
+
+"`endpoints`"
+
+"``endpoints``"
+
+"[.code]``endpoints``" or \"``endpoints``"
+
+The ``class```' static methods make it easy to operate on files and directories.
+
+The `class`’ static methods make it easy to operate on files and directories.
