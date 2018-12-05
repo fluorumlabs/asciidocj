@@ -44,7 +44,7 @@ public class AsciidocHtmlTest {
                         // ignore
                     }
                     String fileName = asciidocFile.replace(".adoc", "");
-                    String id = Utils.extractAfter(fileName.replace('\\','/'), "com/vaadin/commons/format/suite/");
+                    String id = Utils.extractAfterStrict(fileName.replace('\\','/'), "tests/");
                     if ( htmlString != null && asciidocString != null ) {
                         dataSet.add(new Object[]{id, asciidocString, htmlString});
                     }
