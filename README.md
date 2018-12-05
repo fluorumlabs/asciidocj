@@ -1,5 +1,7 @@
 # Asciidoc to HTML renderer
 
+[![Build Status](https://travis-ci.com/fluorumlabs/asciidocj.svg?branch=master)](https://travis-ci.com/fluorumlabs/asciidocj)
+
 ## What?
 
 `asciidocj` is a _faster_ lightweight lexer-based Asciidoc processor
