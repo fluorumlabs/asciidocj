@@ -108,6 +108,7 @@ public enum AsciidocRenderer {
             case 2:
                 x.tagName("div").addClass("sect" + Integer.toString(level - 1));
                 if ( x.hasClass("abstract")) x.removeClass("abstract");
+                if ( x.hasClass("appendix")) x.removeClass("appendix");
                 Element sectionBody = new Element("div").addClass("sectionbody");
                 // Move all but the first child node
                 moveChildNodesSkipFirst(x, sectionBody);
@@ -143,6 +144,14 @@ public enum AsciidocRenderer {
                 textNode.text(trimRight(textNode.text()));
             }
         }
+
+        if ( x.hasClass("appendix") && x.tagName().equals("h2") && !x.attr("sectNum").isEmpty()) {
+            x.prependText(x.getVariables().optString("appendix-caption","Appendix") +" "+x.attr("sectNum")+": ");
+        } else if ( !x.attr("sectNum").isEmpty() ) {
+            x.prependText(x.attr("sectNum")+". ");
+        }
+        x.removeAttr("sectNum");
+        x.removeClass("appendix");
 
         if (x.parent() != document.body() || document.select("h1").first() != x) {
             if (x.parent() == document.body()) {
@@ -276,6 +285,12 @@ public enum AsciidocRenderer {
                 }
 
                 x.html(idText);
+            }
+            if ( x.getVariables().optString("xrefstyle").equals("full") && x.getVariables().has("sectnum:"+id)) {
+                x.prependText(x.getVariables().getString("sectnum:"+id)+", \u201c");
+                x.appendText("\u201d");
+            } else if ( x.getVariables().optString("xrefstyle").equals("short") && x.getVariables().has("sectnum:"+id)) {
+                x.text(x.getVariables().getString("sectnum:"+id));
             }
         } else {
             if (x.getProperties().has("window")) {
