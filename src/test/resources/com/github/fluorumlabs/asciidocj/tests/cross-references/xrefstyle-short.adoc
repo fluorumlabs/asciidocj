@@ -1,6 +1,11 @@
 :xrefstyle: short
+:sectnums:
 
 [reftext="Installation Procedure"]
 === Installation
 
-<<Installation>>
+=== Other section
+
+<<_installation>>
+
+<<_other_section>>

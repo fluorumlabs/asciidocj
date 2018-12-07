@@ -2,6 +2,7 @@ package com.github.fluorumlabs.asciidocj.impl;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.jsoup.nodes.Attribute;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 
@@ -21,6 +22,34 @@ public class Utils {
     private static Map<String, String> replacements = new ConcurrentHashMap<>();
 
     static {
+        replacements.put("blank", "");
+        replacements.put("empty", "");
+        replacements.put("sp", " ");
+        replacements.put("nbsp", "\u00a0");
+        replacements.put("zwsp", "\u200b");
+        replacements.put("wj", "\u2060");
+        replacements.put("apos", "'");
+        replacements.put("quot", "\"");
+        replacements.put("lsquo", "\u2018");
+        replacements.put("rsquo", "\u2019");
+        replacements.put("ldquo", "\u201c");
+        replacements.put("rdquo", "\u201d");
+        replacements.put("deg", "\u00b0");
+        replacements.put("plus", "+");
+        replacements.put("brvbar", "\u00a6");
+        replacements.put("vbar", "|");
+        replacements.put("amp", "&");
+        replacements.put("lt", "<");
+        replacements.put("gt", ">");
+        replacements.put("startsb", "[");
+        replacements.put("endsb", "]");
+        replacements.put("caret", "^");
+        replacements.put("asterisk", "*");
+        replacements.put("tilde", "~");
+        replacements.put("backslash", "\\");
+        replacements.put("backtick", "`");
+        replacements.put("two-colons", "::");
+        replacements.put("two-semicolons", ";;");
         replacements.put("cpp", "C++");
     }
 
@@ -51,12 +80,13 @@ public class Utils {
     }
 
     public static String extractBetween(String s, String left, String right) {
-        int iLeft = s.indexOf(left);
-        int iRight = s.lastIndexOf(right);
+        String temp = s.replace("\\" + left, "\1").replace("\\" + right, "\2");
+        int iLeft = temp.indexOf(left);
+        int iRight = temp.lastIndexOf(right);
         if (iLeft == -1 || iRight == -1) return "";
-        int head = s.indexOf(left) + left.length();
-        int tail = s.length() - s.lastIndexOf(right);
-        return strip(s, head, tail);
+        int head = temp.indexOf(left) + left.length();
+        int tail = temp.length() - temp.lastIndexOf(right);
+        return strip(temp, head, tail).replace("\1", "\\" + left).replace("\2", "\\" + right);
     }
 
     public static String extractBefore(String s, String right) {
@@ -152,6 +182,12 @@ public class Utils {
     public static void copyChildNodes(Element from, Element to) {
         for (Node node : from.childNodes()) {
             to.appendChild(node.clone());
+        }
+    }
+
+    public static void copyAttributes(Element from, Element to) {
+        for (Attribute attr : from.attributes()) {
+            to.attr(attr.getKey(), attr.getValue());
         }
     }
 

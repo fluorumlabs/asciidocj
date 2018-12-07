@@ -12,14 +12,14 @@ import org.jsoup.select.Elements;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.github.fluorumlabs.asciidocj.impl.Utils.moveChildNodes;
-import static com.github.fluorumlabs.asciidocj.impl.Utils.skipRight;
-import static com.github.fluorumlabs.asciidocj.impl.Utils.stripTail;
+import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 
 /**
  * Created by Artem Godin on 11/27/2018.
  */
 public abstract class AsciidocBase {
+    protected final static String DEFAULT_IMAGESDIR = "images/";
+
     protected Document document;
     protected StringBuilder textBuilder = new StringBuilder(256);
     protected Element currentElement;
@@ -41,6 +41,7 @@ public abstract class AsciidocBase {
             }
             if (properties.has("id")) {
                 element.attr("id", properties.getString("id"));
+                if ( properties.has("reftext") ) attributes.put("anchor:"+properties.getString("id"), properties.get("reftext"));
             }
         }
         currentProperties = properties;
@@ -283,9 +284,43 @@ public abstract class AsciidocBase {
         return parents;
     }
 
+    protected Document upgradeToHtml(Document document) {
+        for (Element element : document.body().getAllElements()) {
+            if ( element instanceof AsciidocElement) {
+                AsciidocElement asciidocElement = (AsciidocElement)element;
+                element.attr("properties", asciidocElement.getProperties().toString());
+                element.attr("tagName", asciidocElement.tagName().replace("__",""));
+                element.tagName("xxx");
+            }
+        }
+
+        document.outputSettings().prettyPrint(false);
+
+        String html = document.body().html()
+                .replace("&lt;","<")
+                .replace("&gt;", ">")
+                .replace("&amp;", "&");
+
+        Document result = Document.createShell("");
+        result.body().append(html);
+
+        // Inception
+        for (Element element : result.body().select("xxx")) {
+            String tagName = element.attr("tagName");
+            JSONObject newProperties = new JSONObject(element.attr("properties"));
+            AsciidocElement newElement = new AsciidocElement(AsciidocRenderer.valueOf(tagName), newProperties, attributes);
+            element.removeAttr("properties");
+            element.removeAttr("tagName");
+            copyChildNodes(element,newElement);
+            copyAttributes(element,newElement);
+
+            element.replaceWith(newElement);
+        }
+
+        return result;
+    }
 
     /* The working horse */
-
     protected void enrich() {
         Elements allElements = document.getAllElements();
         for (Element x : allElements) {

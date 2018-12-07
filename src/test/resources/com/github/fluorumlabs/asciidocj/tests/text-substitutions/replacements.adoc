@@ -4,7 +4,7 @@
 
 (TM)
 
-word--word -- another word--
+word--word -- another word-- and something else
 
 ...
 

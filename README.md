@@ -61,7 +61,6 @@ showtitle = true
 
 - Boundaries of delimited blocks can be unbalanced (see https://asciidoctor.org/docs/user-manual/#delimiter-lines)
 - Support for block nesting is limited
-- Number of mark characters represent list depth
 - Pass-through blocks (`++++`) are considered as blocks: all non closed html tags are closed automatically. This means that they
   can't be used to create complex HTML layouts.
 

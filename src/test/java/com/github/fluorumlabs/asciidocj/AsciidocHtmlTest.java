@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
  */
 @RunWith(Parameterized.class)
 public class AsciidocHtmlTest {
-    @Parameters(name = "{index}: {0}")
+    @Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         List<Object[]> dataSet = new ArrayList<>();
 

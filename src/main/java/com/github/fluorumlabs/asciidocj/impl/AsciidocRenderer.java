@@ -23,12 +23,31 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
  */
 public enum AsciidocRenderer {
     PARAGRAPH_BLOCK(x -> {
-        x.tagName("div").addClass("paragraph");
-        Element p = new Element("p");
-        moveChildNodes(x, p);
-        x.appendChild(p);
+        x.tagName("div");
+        if ( x.hasClass("abstract")) {
+            x.addClass("quoteblock");
+            Element bq = new Element("blockquote");
+            moveChildNodes(x, bq);
+            x.appendChild(bq);
+            Element title = x.select("TITLE__").first();
+            if (title != null) bq.before(title);
+        } else {
+            x.addClass("paragraph");
+            Element p = new Element("p");
+            moveChildNodes(x, p);
+            x.appendChild(p);
+            Element title = x.select("TITLE__").first();
+            if (title != null) p.before(title);
+        }
+    }),
+    QUOTE_BLOCK(x -> {
+        x.tagName("div");
+        x.addClass("quoteblock");
+        Element bq = new Element("blockquote");
+        moveChildNodes(x, bq);
+        x.appendChild(bq);
         Element title = x.select("TITLE__").first();
-        if (title != null) p.before(title);
+        if (title != null) bq.before(title);
     }),
     LITERAL_BLOCK(x -> {
         if (x.hasClass("listing")) {
@@ -51,7 +70,7 @@ public enum AsciidocRenderer {
         Element tbody = new Element("tbody");
         Element tr = new Element("tr");
         Element td1 = new Element("td").addClass("icon");
-        Element div1 = new Element("div").addClass("title").text(StringUtils.capitalize(subType));
+        Element div1 = new Element("div").addClass("title").html(x.attr("text"));
         Element td2 = new Element("td").addClass("content");
         table.appendChild(tbody);
         tbody.appendChild(tr);
@@ -60,6 +79,7 @@ public enum AsciidocRenderer {
 
         moveChildNodes(x, td2);
         x.appendChild(table);
+        x.removeAttr("text");
     }),
     SECTION(x -> {
         int level = Integer.parseInt(x.attr("level"));
@@ -87,6 +107,7 @@ public enum AsciidocRenderer {
                 break;
             case 2:
                 x.tagName("div").addClass("sect" + Integer.toString(level - 1));
+                if ( x.hasClass("abstract")) x.removeClass("abstract");
                 Element sectionBody = new Element("div").addClass("sectionbody");
                 // Move all but the first child node
                 moveChildNodesSkipFirst(x, sectionBody);
@@ -104,10 +125,26 @@ public enum AsciidocRenderer {
         Document document = x.ownerDocument();
         x.tagName("h" + x.attr("level"));
         x.removeAttr("level");
-        if (x.parent() != document.body() || document.select("h1").first() != x) {
-            if (!x.hasAttr("id")) {
-                x.attr("id", "_" + slugify(x.text()));
+        if ( x.hasClass("abstract")) x.removeClass("abstract");
+        if ( x.hasClass("colophon")) x.removeClass("colophon");
+
+        // override id
+        Element last = x.children().last();
+        //TODO Fix forward reference to AsciidocRenderer.LINK.tag()
+        if ( last != null && last.tagName().equals("LINK__") && last.hasAttr("id")) {
+            if ( x.hasAttr("id") ) {
+                x.getVariables().put("anchor:"+last.attr("id"), x.getVariables().optString("anchor:"+x.attr("id")));
             }
+            x.attr("id", last.attr("id"));
+            last.remove();
+            // Also remove trailing space(s) from the last textnode
+            if ( !x.textNodes().isEmpty() ) {
+                TextNode textNode = x.textNodes().get(x.textNodes().size() - 1);
+                textNode.text(trimRight(textNode.text()));
+            }
+        }
+
+        if (x.parent() != document.body() || document.select("h1").first() != x) {
             if (x.parent() == document.body()) {
                 x.addClass("sect0");
             }
@@ -189,7 +226,7 @@ public enum AsciidocRenderer {
             x.before(li);
             x.remove();
         } else {
-            x.tagName("dt").addClass("hdlist" + x.attr("level")).removeAttr("level");
+            x.tagName("dt").addClass("hdlist1").removeAttr("level");
         }
     }),
     DD(x -> {
@@ -225,7 +262,20 @@ public enum AsciidocRenderer {
             if (x.getProperties().has("to-id-contents")) {
                 x.html(x.getProperties().getString("to-id-contents"));
             } else {
-                x.html(x.getVariables().optString("anchor:" + id, ""));
+                String idText = x.getVariables().optString("anchor:" + id, "");
+
+                if ( idText.isEmpty() ) {
+                    Element target = x.ownerDocument().select("#" + id).first();
+                    if (target != null) {
+                        idText = target.text();
+                    }
+                }
+
+                if ( idText.isEmpty() ) {
+                    idText = "["+id+"]";
+                }
+
+                x.html(idText);
             }
         } else {
             if (x.getProperties().has("window")) {
@@ -293,25 +343,41 @@ public enum AsciidocRenderer {
         if (x.getProperties().has("start") && x.getProperties().has("end")) {
             video.attr("src", String.format("%s#t=%s,%s", src, x.getProperties().getString("start"), x.getProperties().getString("end")));
         }
+    }),
+    AUDIO_BLOCK(x -> {
+        String src = x.attr("src");
+        x.tagName("div").addClass("audioblock").removeAttr("src");
+        Element div = new Element("div").addClass("content");
 
-        if (title != null) {
-            div.after(title);
+        Element audio;
+
+        audio = new Element("audio")
+                .attr("src", src)
+                .attr("controls", "");
+        audio.append("Your browser does not support the audio tag.");
+
+        div.appendChild(audio);
+        x.appendChild(div);
+
+        if (x.getProperties().has("options")) {
+            for (String option : x.getProperties().getJSONObject("options").keySet()) {
+                audio.attr(option, "");
+            }
         }
     }),
     IMAGE(x -> {
         x.tagName("img");
 
         String src = x.attr("src");
-        if (!src.startsWith("http://") && !src.startsWith("https://") && x.getVariables().has("imagesdir")) {
-            String path = x.getVariables().getString("imagesdir");
-            if (!path.endsWith("/")) path = path.concat("/");
-            x.attr("src", path.concat(src));
-        }
 
-        if (StringUtils.isNumeric(getArgument(x, 1))) {
+        if (x.getProperties().has("width")) {
+            x.attr("width", x.getProperties().getString("width"));
+        } else if (!getArgument(x, 1).isEmpty()) {
             x.attr("width", getArgument(x, 1));
         }
-        if (StringUtils.isNumeric(getArgument(x, 2))) {
+        if (x.getProperties().has("height")) {
+            x.attr("height", x.getProperties().getString("height"));
+        } else if (!getArgument(x, 2).isEmpty()) {
             x.attr("height", getArgument(x, 2));
         }
         if (x.getProperties().has("title")) {
@@ -374,6 +440,54 @@ public enum AsciidocRenderer {
 
         Element title = x.select("TITLE__").first();
         if (title != null) div.before(title);
+    }),
+    KEYBOARD( x -> {
+        String contents = x.getProperties().optString("shortcut","");
+        if ( contents.endsWith("+")) contents = stripTail(contents,1)+"\1";
+        String[] keys = contents.split("\\+");
+        if ( keys.length == 1 ) {
+            x.tagName("kbd");
+            x.text(contents.replace("\1","+"));
+        } else {
+            x.tagName("span").addClass("keyseq");
+            for (String key : keys) {
+                if ( x.childNodeSize() > 0 ) x.appendText("+");
+                x.appendChild(new Element("kbd").text(trim(key.replace("\1","+"))));
+            }
+        }
+    }),
+    MENU( x -> {
+        String contents = x.getProperties().optString("submenu","");
+        if ( x.getProperties().has("menu") ) {
+            contents = x.getProperties().getString("menu") + ">" + contents;
+        }
+        String[] keys = contents.split(">");
+        if ( keys.length == 1 ) {
+            x.tagName("b").addClass("menu");
+            x.text(trim(keys[0]));
+        } else {
+            x.tagName("span").addClass("menuseq");
+            for ( int i = 0; i < keys.length; i++) {
+                String key = trim(keys[i]);
+                if ( i > 0 ) {
+                    x.appendText("\u00a0"); // nbsp
+                    x.appendChild(new Element("b").addClass("caret").text("\u203a"));
+                    x.appendText(" ");
+                }
+                Element item = new Element("b").text(key);
+                if ( i == 0 ) {
+                    item.addClass("menu");
+                } else if ( i < keys.length-1 ) {
+                    item.addClass("submenu");
+                } else {
+                    item.addClass("menuitem");
+                }
+                x.appendChild(item);
+            }
+        }
+    }),
+    BUTTON( x -> {
+        x.tagName("b").addClass("button").text(x.getProperties().optString("button",""));
     }),
     TABLE_CELL(Node::remove), // Cell contents is handled by TABLE_BLOCK
     TABLE_BLOCK(x -> {
@@ -513,7 +627,7 @@ public enum AsciidocRenderer {
         processor.accept(x);
     }
 
-    private static String slugify(String s) {
+    public static String slugify(String s) {
         return slugify.slugify(s).replace("-", "_");
     }
 

@@ -21,91 +21,92 @@ import java.io.StringReader;
 
 %{
     private JSONObject properties = new JSONObject();
-    private StringBuilder currentString = new StringBuilder();
-    private StringBuilder currentName = new StringBuilder();
-    private StringBuilder currentValue = new StringBuilder();
-    private boolean isClass = false;
-    private boolean isId = false;
-    private boolean isOption = false;
-    private boolean isProperty = false;
+        private StringBuilder currentString = new StringBuilder();
+        private StringBuilder currentName = new StringBuilder();
+        private StringBuilder currentValue = new StringBuilder();
+        private boolean isClass = false;
+        private boolean isId = false;
+        private boolean isOption = false;
+        private boolean isProperty = false;
 
-    // We don't need that :)
-    protected static class Yytoken {
-    }
-
-    /**
-    * Parse the PlainText and return a resulting Document
-    *
-    * @param text Properties block
-    * @param p Properties JSONObject that will receive parsed output
-    * @return Properties JSONObject
-    */
-    public static JSONObject parse(String text, JSONObject p) {
-        try(StringReader reader = new StringReader(text)) {
-            PropertiesParser parser = new PropertiesParser(reader);
-            if ( p != null ) {
-                parser.properties = p;
-            }
-            parser.parseInput();
-            parser.addValue(false);
-            return parser.properties;
-        } catch (IOException|ParserException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void addValue(boolean force) {
-        if ( currentString.length() == 0 && !force ) return;
-
-        if ( !(isProperty || isId || isOption || isClass)) {
-            if ( !properties.has("arguments") ) {
-                properties.put("arguments", new JSONArray());
-            }
-            properties.getJSONArray("arguments").put(currentString.toString());
+        // We don't need that :)
+        protected static class Yytoken {
         }
 
-        if ( isClass ) {
-            if ( !properties.has("class") ) {
-                properties.put("class", new JSONObject());
-            }
-            JSONObject classes = properties.getJSONObject("class");
-            for (String className: currentName.toString().split(" ")) {
-                classes.put(className, "");
-            }
-        } else if ( isId ) {
-            properties.put("id",currentName.toString());
-        } else if ( isOption ) {
-           if ( !properties.has("options") ) {
-               properties.put("options", new JSONObject());
-           }
-           properties.getJSONObject("options").put(currentName.toString(),"");
-        } else if ( isProperty ) {
-            if ( currentName.toString().equals("role") ) {
-                if ( !properties.has("class") ) {
-                   properties.put("class", new JSONObject());
+        /**
+        * Parse the PlainText and return a resulting Document
+        *
+        * @param text Properties block
+        * @param p Properties JSONObject that will receive parsed output
+        * @return Properties JSONObject
+        */
+        public static JSONObject parse(String text, JSONObject p) {
+            try(StringReader reader = new StringReader(text)) {
+                PropertiesParser parser = new PropertiesParser(reader);
+                if ( p != null ) {
+                    parser.properties = p;
                 }
-
-                properties.getJSONObject("class").put(currentValue.toString(),"");
-            } else if ( currentName.toString().equals("options") ) {
-               if ( !properties.has("options") ) {
-                  properties.put("options", new JSONObject());
-               }
-
-               properties.getJSONObject("options").put(currentValue.toString(),"");
-           } else {
-                properties.put(currentName.toString(),currentValue.toString());
+                parser.parseInput();
+                parser.addValue(false);
+                return parser.properties;
+            } catch (IOException|ParserException e) {
+                throw new RuntimeException(e);
             }
         }
 
-        currentString.setLength(0);
-        currentName.setLength(0);
-        currentValue.setLength(0);
+        private void addValue(boolean force) {
+            if ( currentString.length() == 0 && !force ) return;
 
-        isClass = false;
-        isId = false;
-        isOption = false;
-        isProperty = false;
-    }
+            if ( !(isProperty || isId || isOption || isClass)) {
+                if ( !properties.has("arguments") ) {
+                    properties.put("arguments", new JSONArray());
+                }
+                properties.getJSONArray("arguments").put(currentString.toString());
+            }
+
+            if ( isClass ) {
+                if ( !properties.has("class") ) {
+                    properties.put("class", new JSONObject());
+                }
+                JSONObject classes = properties.getJSONObject("class");
+                for (String className: currentName.toString().split(" ")) {
+                    classes.put(className, "");
+                }
+            } else if ( isId ) {
+                properties.put("id",currentName.toString());
+            } else if ( isOption ) {
+               if ( !properties.has("options") ) {
+                   properties.put("options", new JSONObject());
+               }
+               properties.getJSONObject("options").put(currentName.toString(),"");
+            } else if ( isProperty ) {
+                if ( currentName.toString().equals("role") ) {
+                    if ( !properties.has("class") ) {
+                       properties.put("class", new JSONObject());
+                    }
+
+                    properties.getJSONObject("class").put(currentValue.toString(),"");
+                } else if ( currentName.toString().equals("options") ) {
+                   if ( !properties.has("options") ) {
+                      properties.put("options", new JSONObject());
+                   }
+                   for (String v : currentValue.toString().split(",")) {
+                       properties.getJSONObject("options").put(v.trim(),"");
+                   }
+               } else {
+                    properties.put(currentName.toString(),currentValue.toString());
+                }
+            }
+
+            currentString.setLength(0);
+            currentName.setLength(0);
+            currentValue.setLength(0);
+
+            isClass = false;
+            isId = false;
+            isOption = false;
+            isProperty = false;
+        }
 %}
 
 %state QUOTED

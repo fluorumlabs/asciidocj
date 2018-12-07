@@ -34,3 +34,6 @@ target
 .project
 
 rebel.xml
+
+# extra tests
+src/test/resources/com/github/fluorumlabs/asciidocj/tests/it

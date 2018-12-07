@@ -3,7 +3,7 @@ package com.github.fluorumlabs.asciidocj.impl.jflex;
 import com.github.fluorumlabs.asciidocj.impl.AsciidocBase;
 import com.github.fluorumlabs.asciidocj.impl.AsciidocRenderer;
 import com.github.fluorumlabs.asciidocj.impl.ParserException;
-import org.json.JSONObject;
+import org.apache.commons.lang3.StringUtils;import org.json.JSONObject;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
@@ -145,7 +145,7 @@ LineFeed                    = \R | \0
 Whitespace					= " "|"\t"
 NoLineFeed                  = [^\r\n\u2028\u2029\u000B\u000C\u0085\0]
 
-Properties                  = "[" [\]]* "]" {Whitespace}*
+Properties                  = "[" ("\\]"|[^\]\r\n\u2028\u2029\u000B\u000C\u0085\0])* "]" {Whitespace}*
 AttributeName               = [A-Za-z0-9_][A-Za-z0-9_-]*
 
 AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
@@ -156,6 +156,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 %state LITERAL_PARAGRAPH
 %state LIST_PARAGRAPH
 
+%state OPEN_BLOCK
 %state LITERAL_BLOCK
 %state PASSTHROUGH_BLOCK
 %state SIDEBAR_BLOCK
@@ -195,6 +196,17 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     {
             }
 
+    ":!" {AttributeName} ":" {Whitespace}* {LineFeed} |
+    ":" {AttributeName} "!:" {Whitespace}* {LineFeed}
+    {
+                String[] parts = yytext().replace("!","").split(":", 3);
+                String value = trimAll(parts[2]);
+
+                if ( attributes.has(parts[1]) ) {
+                    attributes.remove(parts[1]);
+                }
+            }
+
     ":" {AttributeName} ":" {NoLineFeed}* {Whitespace}+ / "//"
     {
                 String[] parts = yytext().split(":", 3);
@@ -213,8 +225,9 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 
     "[[" {NoLineFeed}+ "]]" {LineFeed}
     {
-                String id = extractBetween(yytext(), "[[", "]]");
-                properties.put("id", id);
+                String[] id = extractBetween(yytext(), "[[", "]]").split(",",2);
+                if ( id.length>0 ) properties.put("id", id[0]);
+                if ( id.length>1 ) properties.put("reftext", getFormatted(id[1]).body().html());
             }
 
     "[" {NoLineFeed}+ "'" {NoLineFeed}+ "']" {LineFeed} |
@@ -283,7 +296,15 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 
                 if (admonitionType != null) {
                     properties.getJSONObject("class").remove(admonitionType.toUpperCase());
-                    openElement(AsciidocRenderer.ADMONITION_BLOCK).attr("subtype", admonitionType);
+                    openElement(AsciidocRenderer.ADMONITION_BLOCK)
+                        .attr("subtype", admonitionType)
+                        .attr("text", getFormatted(attributes.optString(admonitionType+"-caption",StringUtils.capitalize(admonitionType))).body().html());
+
+                    if (!titleHtml.isEmpty()) {
+                        openElement(AsciidocRenderer.TITLE).attr("caption", caption)
+                                .html(titleHtml);
+                        closeElement(AsciidocRenderer.TITLE);
+                    }
                 } else {
                     openElement(AsciidocRenderer.EXAMPLE_BLOCK);
 
@@ -301,6 +322,24 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     {
                 openElement(AsciidocRenderer.LITERAL_BLOCK);
                 yybegin(LITERAL_BLOCK);
+            }
+
+    "--" {LineFeed}
+    {
+                String titleHtml = properties.optString("title:html");
+                String caption = properties.optString("caption");
+
+                if ( hasClass("abstract") ) {
+                    openElement(AsciidocRenderer.QUOTE_BLOCK);
+                }
+
+                if (!titleHtml.isEmpty()) {
+                    openElement(AsciidocRenderer.TITLE).attr("caption", caption)
+                            .html(titleHtml);
+                    closeElement(AsciidocRenderer.TITLE);
+                }
+
+                yybegin(OPEN_BLOCK);
             }
 
     [-]{4,128} {LineFeed}
@@ -372,9 +411,15 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 }
                 Document formattedTitle = getFormatted(title);
                 String formattedTitleString = formattedTitle.body().html();
+                String formattedReferenceString = getFormatted(properties.optString("reftext",title)).body().html();
+
+                if ( id.isEmpty() && level > 1) {
+                    id = "_" + AsciidocRenderer.slugify(formattedTitle.text());
+                    properties.put("id", id);
+                }
 
                 if (!id.isEmpty()) {
-                    attributes.put("anchor:" + id, formattedTitle.body().html());
+                    attributes.put("anchor:" + id, formattedReferenceString);
                 }
 
                 openElement(AsciidocRenderer.HEADER).attr("level", Integer.toString(level));
@@ -532,9 +577,16 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     "image::" {NoLineFeed}+ {Properties}? {LineFeed}
     {
                 String imgUrl = extractBetween(yytext(), "image::", "[");
+
+                if (!imgUrl.startsWith("http://") && !imgUrl.startsWith("https://")) {
+                    String path = attributes.optString("imagesdir", DEFAULT_IMAGESDIR);
+                    if (!path.endsWith("/")) path = path.concat("/");
+                   imgUrl = path.concat(imgUrl);
+                }
+
                 PropertiesParser.parse(extractBetween(yytext(), "[", "]"), properties);
 
-                String alt = getArgument(0);
+                String alt = properties.optString("alt", getArgument(0));
                 if (alt.isEmpty()) alt = extractAfterStrict(extractBeforeStrict(imgUrl, "."), "/");
                 String titleHtml = properties.optString("title:html");
                 String title = properties.optString("title");
@@ -544,6 +596,12 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 JSONObject imageProperties = new JSONObject();
                 if (properties.has("arguments")) {
                     imageProperties.put("arguments", properties.getJSONArray("arguments"));
+                }
+                if (properties.has("width")) {
+                    imageProperties.put("width", properties.get("width"));
+                }
+                if (properties.has("height")) {
+                    imageProperties.put("height", properties.get("height"));
                 }
 
                 openElement(AsciidocRenderer.IMAGE_BLOCK);
@@ -569,7 +627,15 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     "video::" {NoLineFeed}+ {Properties}? {LineFeed}
     {
                 String videoUrl = extractBetween(yytext(), "video::", "[");
+
                 PropertiesParser.parse(extractBetween(yytext(), "[", "]"), properties);
+
+                if (!videoUrl.startsWith("http://") && !videoUrl.startsWith("https://")
+                    && !getArgument(0).equals("youtube") && !getArgument(0).equals("vimeo")) {
+                    String path = attributes.optString("imagesdir", DEFAULT_IMAGESDIR);
+                    if (!path.endsWith("/")) path = path.concat("/");
+                   videoUrl = path.concat(videoUrl);
+                }
 
                 String titleHtml = properties.optString("title:html");
                 String caption = properties.optString("caption");
@@ -577,7 +643,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 openElement(AsciidocRenderer.VIDEO_BLOCK).attr("src", videoUrl);
 
                 if (!titleHtml.isEmpty()) {
-                    openElement(AsciidocRenderer.TITLE).attr("type", "Video")
+                    openElement(AsciidocRenderer.TITLE)
                             .attr("caption", caption)
                             .html(titleHtml);
                 }
@@ -585,13 +651,41 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 closeElement(AsciidocRenderer.VIDEO_BLOCK);
             }
 
+    "audio::" {NoLineFeed}+ {Properties}? {LineFeed}
+    {
+                String audioUrl = extractBetween(yytext(), "audio::", "[");
+
+                PropertiesParser.parse(extractBetween(yytext(), "[", "]"), properties);
+
+                if (!audioUrl.startsWith("http://") && !audioUrl.startsWith("https://")) {
+                    String path = attributes.optString("imagesdir", DEFAULT_IMAGESDIR);
+                    if (!path.endsWith("/")) path = path.concat("/");
+                   audioUrl = path.concat(audioUrl);
+                }
+
+                String titleHtml = properties.optString("title:html");
+                String caption = properties.optString("caption");
+
+                openElement(AsciidocRenderer.AUDIO_BLOCK).attr("src", audioUrl);
+
+                if (!titleHtml.isEmpty()) {
+                    openElement(AsciidocRenderer.TITLE)
+                            .attr("caption", caption)
+                            .html(titleHtml);
+                }
+
+                closeElement(AsciidocRenderer.AUDIO_BLOCK);
+            }
+
     {AdmonitionType} ":" {NoLineFeed}
     {
-                String subType = extractBefore(yytext(), ":").toLowerCase();
-                openElement(AsciidocRenderer.ADMONITION_BLOCK).attr("subtype", subType);
-                yypushback(1);
-                yybegin(BLOCK);
-            }
+                    String subType = extractBefore(yytext(), ":").toLowerCase();
+                    openElement(AsciidocRenderer.ADMONITION_BLOCK)
+                        .attr("subtype", subType)
+                        .attr("text", getFormatted(attributes.optString(subType+"-caption",StringUtils.capitalize(subType))).body().html());
+                    yypushback(1);
+                    yybegin(BLOCK);
+                }
 
 
     {Whitespace}+ {NoLineFeed}
@@ -615,7 +709,16 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 
                 if (admonitionType != null) {
                     properties.getJSONObject("class").remove(admonitionType.toUpperCase());
-                    openElement(AsciidocRenderer.ADMONITION_BLOCK).attr("subtype", admonitionType);
+                    openElement(AsciidocRenderer.ADMONITION_BLOCK)
+                        .attr("subtype", admonitionType)
+                        .attr("text", getFormatted(attributes.optString(admonitionType+"-caption",StringUtils.capitalize(admonitionType))).body().html());
+
+                    if (!titleHtml.isEmpty()) {
+                        openElement(AsciidocRenderer.TITLE).attr("caption", caption)
+                                .html(titleHtml);
+                        closeElement(AsciidocRenderer.TITLE);
+                    }
+
                     yypushback(1);
                     yybegin(BLOCK);
                 } else if (getArgument(0).equals("source")) {
@@ -642,6 +745,30 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                     yybegin(BLOCK);
                 }
             }
+}
+
+<LIST_PARAGRAPH, BLOCK> {
+    {LineFeed}? {Whitespace}* [*]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
+    {LineFeed}? {Whitespace}* [-]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
+    {LineFeed}? {Whitespace}* ([1-9][0-9]*)? [.]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
+    {LineFeed}? {Whitespace}* {NoLineFeed}+ [:]{2,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
+    {LineFeed}? {Whitespace}* {NoLineFeed}+ [:]{2,5} {LineFeed} |
+    {LineFeed}? "<" [1-9][0-9]* ">" {Whitespace} {NoLineFeed}+ {LineFeed} |
+    {LineFeed}? ":" {AttributeName} ":" |
+    {LineFeed}? ":!" {AttributeName} ":" |
+    {LineFeed}? ":" {AttributeName} "!:" |
+    {LineFeed}? {Properties} {LineFeed}
+    {
+                yypushback(yytext().length());
+                appendFormatted();
+                Element parent = currentElement.parent();
+                if (currentElement.tagName().equals(AsciidocRenderer.P.tag()) && currentElement.text().isEmpty()) {
+                    currentElement.remove();
+                }
+                currentElement = parent;
+                yybegin(NEWLINE);
+            }
+
 }
 
 <BLOCK> {
@@ -691,25 +818,8 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
             }
 }
 
-<LIST_PARAGRAPH> {
-    {LineFeed}? {Whitespace}* [*]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
-    {LineFeed}? {Whitespace}* [-]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
-    {LineFeed}? {Whitespace}* ([1-9][0-9]*)? [.]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
-    {LineFeed}? {Whitespace}* {NoLineFeed}+ [:]{2,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
-    {LineFeed}? {Whitespace}* {NoLineFeed}+ [:]{2,5} {LineFeed} |
-    {LineFeed}? "<" [1-9][0-9]* ">" {Whitespace} {NoLineFeed}+ {LineFeed} |
-    {LineFeed}? ":" {AttributeName} ":"
-    {
-                yypushback(yytext().length());
-                appendFormatted();
-                Element parent = currentElement.parent();
-                if (currentElement.tagName().equals(AsciidocRenderer.P.tag()) && currentElement.text().isEmpty()) {
-                    currentElement.remove();
-                }
-                currentElement = parent;
-                yybegin(NEWLINE);
-            }
 
+<LIST_PARAGRAPH> {
     {LineFeed}
     {
                 appendFormatted();
@@ -798,30 +908,27 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 }
 
 <LISTING_BLOCK, LISTING_PARAGRAPH, LISTING_FENCE_BLOCK> {
-    "//" {Whitespace}* "<" [1-9][0-9+]* ">" {Whitespace}* {LineFeed} |
-    "#" {Whitespace}* "<" [1-9][0-9+]* ">" {Whitespace}* {LineFeed} |
-    ";;" {Whitespace}* "<" [1-9][0-9+]* ">" {Whitespace}* {LineFeed}
+    "//" {Whitespace}* "<" [1-9][0-9+]* ">" |
+    "#" {Whitespace}* "<" [1-9][0-9+]* ">" |
+    ";;" {Whitespace}* "<" [1-9][0-9+]* ">"
     {
                 // Asciidoctor 1.5.8+
                 appendText(extractBeforeStrict(yytext(), "<"));
                 // End of Asciidoctor 1.5.8+
                 openElement("b").addClass("conum").text(String.format("(%s)", extractBetween(yytext(), "<", ">")));
                 closeElement("b");
-                yypushback(1);
             }
 
-    "<" [1-9][0-9+]* ">" {Whitespace}* {LineFeed}
+    "<" [1-9][0-9+]* ">"
     {
                 openElement("b").addClass("conum").text(String.format("(%s)", extractBetween(yytext(), "<", ">")));
                 closeElement("b");
-                yypushback(1);
             }
 
-    "<!--" [1-9][0-9]* "-->" {Whitespace}* {LineFeed}
+    "<!--" [1-9][0-9]* "-->"
     {
                 openElement("b").addClass("conum").text(String.format("(%s)", extractBetween(yytext(), "<!--", "-->")));
                 closeElement("b");
-                yypushback(1);
             }
 
     {Whitespace}* {LineFeed}
@@ -938,6 +1045,20 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
             }
 
     [^]
+    {
+                appendText(yytext());
+            }
+}
+
+<OPEN_BLOCK> {
+    {Whitespace}* {LineFeed}* "--" {LineFeed}
+    {
+                appendSubdocument(getTextAndClear());
+                closeBlockElement();
+                yybegin(NEWLINE);
+            }
+
+    {NoLineFeed}* {LineFeed}
     {
                 appendText(yytext());
             }
