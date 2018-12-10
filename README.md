@@ -29,7 +29,7 @@ same DOM tree with exactly same classes, meaning that you can use it right away 
 <dependency>
    <groupId>com.github.fluorumlabs</groupId>
    <artifactId>asciidocj</artifactId>
-   <version>1.0.0-alpha1</version>
+   <version>1.0.0-alpha2</version>
 </dependency>
 ```
 
