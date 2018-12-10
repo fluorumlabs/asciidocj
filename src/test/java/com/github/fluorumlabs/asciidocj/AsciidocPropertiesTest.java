@@ -79,7 +79,9 @@ public class AsciidocPropertiesTest {
                 {"source%nowrap,java",
                         "{\"options\":{\"nowrap\":\"\"},\"arguments\":[\"source\",\"java\"]}"},
                 {"quote, Somebody, Hi there",
-                        "{\"arguments\":[\"quote\",\"Somebody\",\"Hi there\"]}"}
+                        "{\"arguments\":[\"quote\",\"Somebody\",\"Hi there\"]}"},
+                {"quote, Captain James T. Kirk, Star Trek IV: The Voyage Home",
+                        "{\"arguments\":[\"quote\",\"Captain James T. Kirk\",\"Star Trek IV: The Voyage Home\"]}"}
         });
     }
 

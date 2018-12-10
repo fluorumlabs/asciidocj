@@ -183,6 +183,7 @@ import java.io.StringReader;
     "," " "*
     {
         addValue(true);
+        canShorthands = false;
     }
 
 	/* Any other character */

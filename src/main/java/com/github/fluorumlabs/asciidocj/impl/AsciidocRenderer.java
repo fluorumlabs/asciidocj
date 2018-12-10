@@ -41,13 +41,33 @@ public enum AsciidocRenderer {
         }
     }),
     QUOTE_BLOCK(x -> {
-        x.tagName("div");
-        x.addClass("quoteblock");
-        Element bq = new Element("blockquote");
-        moveChildNodes(x, bq);
-        x.appendChild(bq);
-        Element title = x.select("TITLE__").first();
-        if (title != null) bq.before(title);
+        x.tagName("div").removeClass("quote");
+        if ( x.getProperties().has("verse%")) {
+            x.addClass("verseblock");
+            Element pre = new Element("pre").addClass("content");
+            moveChildNodes(x, pre);
+            x.appendChild(pre);
+            Element title = x.select("TITLE__").first();
+            if (title != null) pre.before(title);
+        } else {
+            x.addClass("quoteblock");
+            Element bq = new Element("blockquote");
+            moveChildNodes(x, bq);
+            x.appendChild(bq);
+            Element title = x.select("TITLE__").first();
+            if (title != null) bq.before(title);
+        }
+
+        if (!x.getProperties().optString("quote:attribution").isEmpty()) {
+            Element div = new Element("div").addClass("attribution");
+            div.appendText("\u2014 ");
+            div.append(x.getProperties().optString("quote:attribution"));
+            if ( !x.getProperties().optString("quote:cite").isEmpty()) {
+                div.appendChild(new Element("br"));
+                div.appendChild(new Element("cite").html(x.getProperties().optString("quote:cite")));
+            }
+            x.appendChild(div);
+        }
     }),
     LITERAL_BLOCK(x -> {
         if (x.hasClass("listing")) {

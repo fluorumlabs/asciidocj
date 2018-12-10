@@ -167,6 +167,10 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 %state LISTING_FENCE_BLOCK
 %state LISTING_PARAGRAPH
 %state COMMENT_BLOCK
+%state QUOTE_BLOCK
+%state VERSE_BLOCK
+%state VERSE_PARAGRAPH
+%state AIR_QUOTE_BLOCK
 
 %state TABLE_BLOCK
 %state TABLE_CELL
@@ -359,6 +363,82 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 
                 yybegin(LISTING_BLOCK);
             }
+
+    [_]{4,128} {LineFeed}
+    {
+                String titleHtml = properties.optString("title:html");
+                String caption = properties.optString("caption");
+
+                if ( getArgument(0).equals("quote") || getArgument(0).equals("verse")) {
+                    properties.put("quote:attribution", getFormatted(getArgument(1)).body().html());
+                    properties.put("quote:cite", getFormatted(getArgument(2)).body().html());
+                }
+
+                boolean isVerse = getArgument(0).equals("verse");
+                if ( isVerse ) {
+                    properties.put("verse%","");
+                }
+
+                openElement(AsciidocRenderer.QUOTE_BLOCK);
+
+                if (!titleHtml.isEmpty()) {
+                    openElement(AsciidocRenderer.TITLE).attr("caption", caption)
+                            .html(titleHtml);
+                    closeElement(AsciidocRenderer.TITLE);
+                }
+
+                if ( isVerse ) {
+                    yybegin(VERSE_BLOCK);
+                } else {
+                    yybegin(QUOTE_BLOCK);
+                }
+            }
+
+    "\"\"" {LineFeed}
+    {
+                String titleHtml = properties.optString("title:html");
+                String caption = properties.optString("caption");
+
+                properties.put("quote:attribution", getFormatted(getArgument(1)).body().html());
+                properties.put("quote:cite", getFormatted(getArgument(2)).body().html());
+
+                openElement(AsciidocRenderer.QUOTE_BLOCK);
+
+                if (!titleHtml.isEmpty()) {
+                    openElement(AsciidocRenderer.TITLE).attr("caption", caption)
+                            .html(titleHtml);
+                    closeElement(AsciidocRenderer.TITLE);
+                }
+
+                yybegin(AIR_QUOTE_BLOCK);
+            }
+
+    "\"" ({NoLineFeed}+ {LineFeed})* {NoLineFeed}+ "\"" {LineFeed} "-- " {NoLineFeed}+ {LineFeed}
+    {
+        // Quoted paragraph -_-
+        String text = stripTail(yytext(),1);
+        String cite = extractAfterStrict(text,"-- ");
+        text = strip(text, 1, cite.length()+5); // including double quotes, line feed and "-- "
+        String[] attribution = cite.split(",",2);
+
+        String titleHtml = properties.optString("title:html");
+        String caption = properties.optString("caption");
+
+        if ( attribution.length > 0 ) properties.put("quote:attribution", getFormatted(attribution[0].trim()).body().html());
+        if ( attribution.length > 1 ) properties.put("quote:cite", getFormatted(attribution[1].trim()).body().html());
+
+        openElement(AsciidocRenderer.QUOTE_BLOCK);
+
+        if (!titleHtml.isEmpty()) {
+            openElement(AsciidocRenderer.TITLE).attr("caption", caption)
+                    .html(titleHtml);
+            closeElement(AsciidocRenderer.TITLE);
+        }
+
+        appendFormatted(text);
+
+        closeElement(AsciidocRenderer.QUOTE_BLOCK);
+    }
 
     [`]{3,128} {LineFeed}
     {
@@ -826,6 +906,27 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                     }
 
                     yybegin(LISTING_PARAGRAPH);
+                } else if (getArgument(0).equals("quote") || getArgument(0).equals("verse")) {
+                    yypushback(1);
+                    properties.put("quote:attribution", getFormatted(getArgument(1)).body().html());
+                    properties.put("quote:cite", getFormatted(getArgument(2)).body().html());
+                    boolean isVerse = getArgument(0).equals("verse");
+                    if ( isVerse ) {
+                        properties.put("verse%","");
+                    }
+                    openElement(AsciidocRenderer.QUOTE_BLOCK);
+
+                    if (!titleHtml.isEmpty()) {
+                        openElement(AsciidocRenderer.TITLE).attr("caption", caption)
+                                .html(titleHtml);
+                        closeElement(AsciidocRenderer.TITLE);
+                    }
+
+                    if ( isVerse ) {
+                        yybegin(VERSE_PARAGRAPH);
+                    } else {
+                        yybegin(BLOCK);
+                    }
                 } else {
                     openElement(AsciidocRenderer.PARAGRAPH_BLOCK);
 
@@ -841,7 +942,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
             }
 }
 
-<LIST_PARAGRAPH, BLOCK> {
+<LIST_PARAGRAPH, BLOCK, VERSE_PARAGRAPH> {
     {LineFeed}? {Whitespace}* [*]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
     {LineFeed}? {Whitespace}* [-]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
     {LineFeed}? {Whitespace}* ([1-9][0-9]*)? [.]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
@@ -980,6 +1081,72 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 appendTextNode();
                 closeBlockElement();
                 yybegin(NEWLINE);
+            }
+}
+
+<QUOTE_BLOCK> {
+    {Whitespace}* {LineFeed}* [_]{4,128} {LineFeed}
+    {
+                appendSubdocument(getTextAndClear());
+                closeBlockElement();
+                yybegin(NEWLINE);
+            }
+
+    {NoLineFeed}* {LineFeed}
+    {
+                appendText(yytext());
+            }
+}
+
+<VERSE_BLOCK> {
+    {Whitespace}* {LineFeed}* [_]{4,128} {LineFeed}
+    {
+                closeBlockElement();
+                yybegin(NEWLINE);
+            }
+
+    "//" {NoLineFeed}+ {LineFeed}
+    {
+            }
+
+    {NoLineFeed}* {LineFeed}
+    {
+                appendFormatted(stripTail(yytext(),1));
+                appendText(yytext().substring(yytext().length()-1));
+                appendTextNode();
+            }
+}
+
+<VERSE_PARAGRAPH> {
+    {LineFeed}
+    {
+                closeBlockElement();
+                yybegin(NEWLINE);
+            }
+
+    "//" {NoLineFeed}+ {LineFeed}
+    {
+            }
+
+    {NoLineFeed}+ {LineFeed}
+    {
+                appendFormatted(stripTail(yytext(),1));
+                appendText(yytext().substring(yytext().length()-1));
+                appendTextNode();
+            }
+}
+
+<AIR_QUOTE_BLOCK> {
+    {Whitespace}* {LineFeed}* "\"\"" {LineFeed}
+    {
+                appendSubdocument(getTextAndClear());
+                closeBlockElement();
+                yybegin(NEWLINE);
+            }
+
+    {NoLineFeed}* {LineFeed}
+    {
+                appendText(yytext());
             }
 }
 
