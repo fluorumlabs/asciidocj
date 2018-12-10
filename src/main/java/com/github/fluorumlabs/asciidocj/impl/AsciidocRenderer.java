@@ -414,12 +414,18 @@ public enum AsciidocRenderer {
         }
     }),
     LISTING_BLOCK(x -> {
-        x.tagName("div").addClass("listingblock");
+        x.tagName("div").addClass("listingblock").removeClass("listing");
         Element div = new Element("div").addClass("content");
-        if (getArgument(x, 0).equals("source")) {
+        if (getArgument(x, 0).equals("source") || x.hasClass("source")) {
             String language = getArgument(x, 1);
+            if ( language.isEmpty() ) language=x.getVariables().optString("source-language");
             Element pre = new Element("pre")
                     .addClass("highlight");
+
+            if ( hasOption(x,"nowrap")) {
+                pre.addClass("nowrap");
+            }
+
             Element code = new Element("code");
             if (!language.isEmpty()) {
                 code.addClass("language-" + language)
@@ -430,6 +436,7 @@ public enum AsciidocRenderer {
 
             moveChildNodes(x, code);
             x.appendChild(div);
+            x.removeClass("source");
         } else {
             Element listingPre = new Element("pre");
             div.appendChild(listingPre);

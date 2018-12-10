@@ -221,5 +221,17 @@ public class Utils {
         }
     }
 
+    protected static boolean hasOption(Element x, String key) {
+        if (!(x instanceof AsciidocElement)) {
+            return false;
+        }
+        JSONObject properties = ((AsciidocElement) x).getProperties();
+        if (!properties.has("options")) {
+            return false;
+        } else {
+            return properties.getJSONObject("options").has(key);
+        }
+    }
+
 
 }

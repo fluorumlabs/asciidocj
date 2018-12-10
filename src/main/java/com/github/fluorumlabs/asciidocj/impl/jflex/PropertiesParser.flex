@@ -28,6 +28,7 @@ import java.io.StringReader;
         private boolean isId = false;
         private boolean isOption = false;
         private boolean isProperty = false;
+        private boolean canShorthands = false;
 
         // We don't need that :)
         protected static class Yytoken {
@@ -40,12 +41,13 @@ import java.io.StringReader;
         * @param p Properties JSONObject that will receive parsed output
         * @return Properties JSONObject
         */
-        public static JSONObject parse(String text, JSONObject p) {
+        public static JSONObject parse(String text, JSONObject p, boolean withShorthands) {
             try(StringReader reader = new StringReader(text)) {
                 PropertiesParser parser = new PropertiesParser(reader);
                 if ( p != null ) {
                     parser.properties = p;
                 }
+                parser.canShorthands = withShorthands;
                 parser.parseInput();
                 parser.addValue(false);
                 return parser.properties;
@@ -118,9 +120,9 @@ import java.io.StringReader;
 %%
 
 <YYINITIAL> {
-    "."
+    "." / \s* [a-zA-Z0-9]
     {
-        if ( currentString.length() == 0 || isClass || isId || isOption) {
+        if (canShorthands) {
             addValue(false);
             isClass = true;
         } else {
@@ -129,9 +131,9 @@ import java.io.StringReader;
         }
     }
 
-    "%"
+    "%" / \s* [a-zA-Z0-9]
     {
-        if ( currentString.length() == 0 || isClass || isId || isOption) {
+        if (canShorthands) {
             addValue(false);
             isOption = true;
         } else {
@@ -140,9 +142,9 @@ import java.io.StringReader;
         }
     }
 
-    "#"
+    "#" / \s* [a-zA-Z0-9]
     {
-        if ( currentString.length() == 0 || isClass || isId || isOption) {
+        if (canShorthands) {
             addValue(false);
             isId = true;
         } else {

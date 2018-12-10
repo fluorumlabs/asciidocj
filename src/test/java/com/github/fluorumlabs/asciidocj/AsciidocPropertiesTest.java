@@ -75,7 +75,9 @@ public class AsciidocPropertiesTest {
                 {"source, ruby",
                         "{\"arguments\":[\"source\",\"ruby\"]}"},
                 {"id='wrapup'",
-                        "{\"id\":\"wrapup\"}"}
+                        "{\"id\":\"wrapup\"}"},
+                {"source%nowrap,java",
+                        "{\"options\":{\"nowrap\":\"\"},\"arguments\":[\"source\",\"java\"]}"}
         });
     }
 
@@ -90,6 +92,6 @@ public class AsciidocPropertiesTest {
     @Test
     public void testAsciidocProperties() {
         Assert.assertEquals(fExpected,
-                PropertiesParser.parse(fInput, null).toString());
+                PropertiesParser.parse(fInput, null, true).toString());
     }
 }

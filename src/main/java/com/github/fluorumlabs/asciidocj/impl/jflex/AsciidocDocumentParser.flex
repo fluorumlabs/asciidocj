@@ -233,7 +233,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     "[" {NoLineFeed}+ "'" {NoLineFeed}+ "']" {LineFeed} |
     "[" {NoLineFeed}+ "]" {LineFeed}
     {
-                PropertiesParser.parse(strip(yytext(), 1, 2), properties);
+                PropertiesParser.parse(strip(yytext(), 1, 2), properties, true);
                 promoteArgumentsToClasses();
             }
 
@@ -625,7 +625,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                    imgUrl = path.concat(imgUrl);
                 }
 
-                PropertiesParser.parse(extractBetween(yytext(), "[", "]"), properties);
+                PropertiesParser.parse(extractBetween(yytext(), "[", "]"), properties, false);
 
                 String alt = properties.optString("alt", getArgument(0));
                 if (alt.isEmpty()) alt = extractAfterStrict(extractBeforeStrict(imgUrl, "."), "/");
@@ -669,7 +669,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     {
                 String videoUrl = extractBetween(yytext(), "video::", "[");
 
-                PropertiesParser.parse(extractBetween(yytext(), "[", "]"), properties);
+                PropertiesParser.parse(extractBetween(yytext(), "[", "]"), properties, false);
 
                 if (!videoUrl.startsWith("http://") && !videoUrl.startsWith("https://")
                     && !getArgument(0).equals("youtube") && !getArgument(0).equals("vimeo")) {
@@ -696,7 +696,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     {
                 String audioUrl = extractBetween(yytext(), "audio::", "[");
 
-                PropertiesParser.parse(extractBetween(yytext(), "[", "]"), properties);
+                PropertiesParser.parse(extractBetween(yytext(), "[", "]"), properties, false);
 
                 if (!audioUrl.startsWith("http://") && !audioUrl.startsWith("https://")) {
                     String path = attributes.optString("imagesdir", DEFAULT_IMAGESDIR);
@@ -762,7 +762,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 
                     yypushback(1);
                     yybegin(BLOCK);
-                } else if (getArgument(0).equals("source")) {
+                } else if (getArgument(0).equals("source") || getArgument(0).equals("listing")) {
                     yypushback(1);
                     openElement(AsciidocRenderer.LISTING_BLOCK);
 

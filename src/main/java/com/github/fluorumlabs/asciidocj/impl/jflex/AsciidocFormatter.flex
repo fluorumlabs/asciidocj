@@ -297,7 +297,7 @@ Properties                  = "[" ("\\]"|[^\]\r\n\u2028\u2029\u000B\u000C\u0085\
                 String text;
                 id = extractBetween(yytext(), "anchor:", "[");
 
-                PropertiesParser.parse(extractBetween(yytext(), "[", "]"), anchorOptions);
+                PropertiesParser.parse(extractBetween(yytext(), "[", "]"), anchorOptions, false);
                 text = getArgument(anchorOptions, 0);
                 if (!text.isEmpty()) {
                     attributes.put("anchor:" + id, getFormatted(text).body().html());
@@ -322,7 +322,7 @@ Properties                  = "[" ("\\]"|[^\]\r\n\u2028\u2029\u000B\u000C\u0085\
                     text = extractBetween(content,"[","]");
                 } else {
                     JSONObject anchorOptions = new JSONObject();
-                    PropertiesParser.parse(strip(yytext(), 2, 2), anchorOptions);
+                    PropertiesParser.parse(strip(yytext(), 2, 2), anchorOptions, false);
 
                     id = getArgument(anchorOptions, 0);
                     text = getArgument(anchorOptions, 1);
@@ -354,7 +354,7 @@ Properties                  = "[" ("\\]"|[^\]\r\n\u2028\u2029\u000B\u000C\u0085\
                     yypushback(1);
                 }
 
-                PropertiesParser.parse(text, properties);
+                PropertiesParser.parse(text, properties, false);
                 String title = getArgument(0);
                 if (title.endsWith("^")) {
                     title = stripTail(title, 1);
@@ -383,7 +383,7 @@ Properties                  = "[" ("\\]"|[^\]\r\n\u2028\u2029\u000B\u000C\u0085\
                 String content = yytext();
                 String text = extractBetween(extractAfterStrict(content, "++"), "[", "]");
                 String href = extractBetween(content, "++", "++");
-                PropertiesParser.parse(text, properties);
+                PropertiesParser.parse(text, properties, false);
                 String title = getArgument(0);
                 if (title.endsWith("^")) {
                     title = stripTail(title, 1);
@@ -420,7 +420,7 @@ Properties                  = "[" ("\\]"|[^\]\r\n\u2028\u2029\u000B\u000C\u0085\
                     yypushback(1);
                 }
 
-                PropertiesParser.parse(text, properties);
+                PropertiesParser.parse(text, properties, false);
                 String title = getArgument(0);
                 if (title.endsWith("^")) {
                     title = stripTail(title, 1);
@@ -451,7 +451,7 @@ Properties                  = "[" ("\\]"|[^\]\r\n\u2028\u2029\u000B\u000C\u0085\
                 }
                 String href = extractBefore(content, "[");
                 String text = extractBetween(content, "[", "]");
-                PropertiesParser.parse(text, properties);
+                PropertiesParser.parse(text, properties, false);
                 String title = getArgument(0);
 
                 if (!getArgument(1).isEmpty()) {
@@ -487,7 +487,7 @@ Properties                  = "[" ("\\]"|[^\]\r\n\u2028\u2029\u000B\u000C\u0085\
                    imgUrl = path.concat(imgUrl);
                 }
 
-                PropertiesParser.parse(extractBetween(yytext(), "[", "]"), properties);
+                PropertiesParser.parse(extractBetween(yytext(), "[", "]"), properties, false);
 
                 String alt = getArgument(0);
                 if (alt.isEmpty()) alt = extractAfterStrict(extractBeforeStrict(imgUrl, "."), "/");
@@ -583,7 +583,7 @@ Properties                  = "[" ("\\]"|[^\]\r\n\u2028\u2029\u000B\u000C\u0085\
                 if ( fallback(Pass.ATTRIBUTES) ) break;
 
                 String text = strip(yytext(), 1, 1);
-                PropertiesParser.parse(text, properties);
+                PropertiesParser.parse(text, properties, true);
                 if (!properties.has("class")) {
                     properties.put("class", new JSONObject());
                 }
