@@ -145,7 +145,8 @@ LineFeed                    = \R | \0
 Whitespace					= " "|"\t"
 NoLineFeed                  = [^\r\n\u2028\u2029\u000B\u000C\u0085\0]
 
-Properties                  = "[" ("\\]"|[^\]\r\n\u2028\u2029\u000B\u000C\u0085\0])* "]" {Whitespace}*
+PropertiesBare              = "[" ("\\]"|[^\]\r\n\u2028\u2029\u000B\u000C\u0085\0])* "]"
+Properties                  = {PropertiesBare} {Whitespace}*
 AttributeName               = [A-Za-z0-9_][A-Za-z0-9_-]*
 
 AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
@@ -479,6 +480,49 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
             }
 
     /* Lists */
+    {Whitespace}* "*" {Whitespace}+ "[[" {PropertiesBare} "]]" |
+    {Whitespace}* "-" {Whitespace}+ "[[" {PropertiesBare} "]]"
+    {
+                String titleHtml = properties.optString("title:html");
+
+                String id = "";
+                String text = "";
+                String[] data = extractBetween(yytext(), "[[[", "]]]").split(",",2);
+                if ( data.length>0 ) id = data[0];
+                if ( data.length>1 ) {
+                    text = data[1];
+                } else {
+                    text = id;
+                }
+
+                int level = 1;
+                closeToElement(AsciidocRenderer.UL, level);
+                JSONObject props = properties;
+                if (currentElement == null
+                        || !currentElement.tagName().equals(AsciidocRenderer.UL.tag())
+                        || !currentElement.attr("level").equals(Integer.toString(level))) {
+                    properties.put("%bibliography", "true");
+                    openElement(AsciidocRenderer.UL).attr("level", Integer.toString(level));
+                    if (!titleHtml.isEmpty()) {
+                        openElement(AsciidocRenderer.TITLE).html(titleHtml);
+                        closeElement(AsciidocRenderer.TITLE);
+                    }
+                }
+                properties = props;
+                openElement(AsciidocRenderer.LIST_ITEM).attr("level", Integer.toString(level));
+                openElement(AsciidocRenderer.P);
+                openElement(AsciidocRenderer.LINK).attr("id", id);
+                closeElement(AsciidocRenderer.LINK);
+
+                if (!text.isEmpty()) {
+                    attributes.put("anchor:" + id, "["+text+"]");
+                    appendText("["+text+"]");
+                    appendTextNode();
+                }
+
+                yybegin(LIST_PARAGRAPH);
+            }
+
     {Whitespace}* [*]{1,5} {Whitespace} "[" [\sx*] "]" |
     {Whitespace}* [-]{1,5} {Whitespace} "[" [\sx*] "]"
     {

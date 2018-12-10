@@ -83,8 +83,7 @@ public enum AsciidocRenderer {
     }),
     SECTION(x -> {
         int level = Integer.parseInt(x.attr("level"));
-        x.removeAttr("level");
-        x.removeAttr("id");
+        x.removeClass("bibliography").removeAttr("level").removeAttr("id");
         if (x.hasClass("discrete")) {
             level = 0;
         }
@@ -129,8 +128,7 @@ public enum AsciidocRenderer {
         Document document = x.ownerDocument();
         x.tagName("h" + x.attr("level"));
         x.removeAttr("level");
-        if (x.hasClass("abstract")) x.removeClass("abstract");
-        if (x.hasClass("colophon")) x.removeClass("colophon");
+        x.removeClass("abstract").removeClass("colophon").removeClass("bibliography");
 
         // override id
         Element last = x.children().last();
@@ -187,6 +185,10 @@ public enum AsciidocRenderer {
         if (x.getProperties().optBoolean("%checklist")) {
             x.addClass("checklist");
             ul.addClass("checklist");
+        }
+        if (x.getProperties().optBoolean("%bibliography")) {
+            x.addClass("bibliography");
+            ul.addClass("bibliography");
         }
         moveChildNodes(x, ul);
         x.appendChild(ul);
