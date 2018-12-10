@@ -415,34 +415,36 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 
                 // Process sectnums
                 int sectNumDepth = attributes.optInt("sectnumlevels",6)+2;
-                boolean sectNums = attributes.has("sectnums");
+                boolean sectNums = attributes.has("sectnums") || hasClass("appendix");
+                String attribute = hasClass("appendix")?"sectnum-appx":"sectnum";
 
                 StringBuilder num = new StringBuilder();
 
-                attributes.put("sectnum:"+Integer.toString(level), attributes.optInt("sectnum:"+Integer.toString(level), 0)+(sectNums?1:0));
+                attributes.put(attribute+":"+Integer.toString(level), attributes.optInt(attribute+":"+Integer.toString(level), 0)+(sectNums?1:0));
                 if ( hasClass("appendix") ) {
                     attributes.put("sectnum-type:"+Integer.toString(level),"Appendix");
                 }
                 if ( sectNums ) {
                     for ( int i = level+1; i<6; i++) {
                         attributes.remove("sectnum:"+Integer.toString(i));
+                        attributes.remove("sectnum-appx:"+Integer.toString(i));
                         attributes.remove("sectnum-type:"+Integer.toString(i));
                     }
                     boolean first = true;
                     if ( level < sectNumDepth ) {
                         for ( int i = 2; i <= level; i++ ) {
                             String key = Integer.toString(i);
-                            int n = attributes.optInt("sectnum:"+key, 0);
+                            int n = attributes.optInt(attribute+":"+key, 0);
                             if ( !first ) {
                                 num.append(".");
                             }
                             if ( n > 0 && n < 26 && attributes.optString("sectnum-type:"+key).equals("Appendix")) {
-                                num.append((char)('A'+n-2));
+                                num.append((char)('A'+n-1));
                                 first = false;
                             } else if ( n > 0 ) {
                                 num.append(Integer.toString(n));
                                 first = false;
-                            } else if ( attributes.has("sectnum:"+key)) {
+                            } else if ( attributes.has(attribute+":"+key)) {
                                 first = false;
                             }
                         }
@@ -457,9 +459,9 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 if (!id.isEmpty()) {
                     attributes.put("anchor:" + id, formattedReferenceString);
                     if ( sectNums && level > 1 && !properties.has("reftext") && !hasClass("appendix")) {
-                        attributes.put("sectnum:"+id, "Section " + num.toString());
+                        attributes.put(attribute+":"+id, "Section " + num.toString());
                     } else if ( hasClass("appendix") && level == 2 && !properties.has("reftext")) {
-                        attributes.put("sectnum:"+id, attributes.optString("appendix-caption","Appendix") + " " + num.toString());
+                        attributes.put(attribute+":"+id, attributes.optString("appendix-caption","Appendix") + " " + num.toString());
                     }
                 }
 
@@ -717,6 +719,12 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 
                 closeElement(AsciidocRenderer.AUDIO_BLOCK);
             }
+
+    "toc::" {Properties}? {LineFeed}
+    {
+        openElement(AsciidocRenderer.TOC);
+        closeElement(AsciidocRenderer.TOC);
+    }
 
     {AdmonitionType} ":" {NoLineFeed}
     {

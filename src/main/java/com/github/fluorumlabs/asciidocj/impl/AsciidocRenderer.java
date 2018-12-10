@@ -159,6 +159,12 @@ public enum AsciidocRenderer {
             }
         }
     }),
+    TOC(x -> {
+        x.tagName("div").addClass("toc").attr("id","toc");
+        Element div = new Element("div").attr("id","toctitle");
+        div.text(x.getVariables().optString("toc-title", "Table of Contents"));
+        x.prependChild(div);
+    }),
     UL(x -> {
         x.removeAttr("level");
         x.tagName("div").addClass("ulist");

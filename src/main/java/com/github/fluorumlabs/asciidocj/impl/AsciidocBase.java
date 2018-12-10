@@ -11,6 +11,7 @@ import org.jsoup.select.Elements;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 
@@ -322,6 +323,12 @@ public abstract class AsciidocBase {
 
     /* The working horse */
     protected void enrich() {
+        // Autoplacement of TOC
+        Element toc = document.select(AsciidocRenderer.TOC.tag()).first();
+        if ( toc == null ) {
+            toc = new AsciidocElement(AsciidocRenderer.TOC, new JSONObject(), attributes);
+        }
+
         Elements allElements = document.getAllElements();
         for (Element x : allElements) {
             if (x instanceof AsciidocElement) {
@@ -349,5 +356,49 @@ public abstract class AsciidocBase {
             }
             isFirst = false;
         }
+
+        // TOC postprocessing
+        String selector = IntStream.rangeClosed(2, attributes.optInt("toclevels", 3))
+                .mapToObj(i -> String.format("%s%d[id]", "h", i))
+                .collect(Collectors.joining(","));
+
+        int currentLevel = 1;
+        Element currentList = toc;
+        for (Element header : document.select(selector)) {
+            int level = Integer.parseInt(header.tagName().substring(1));
+            if ( currentLevel < level ) {
+                Element newList = new Element("ul").addClass(String.format("sectlevel%d",level-1));
+                currentList.appendChild(newList);
+                currentList = newList;
+                currentLevel = level;
+            } else if ( currentLevel > level ) {
+                currentList = currentList.parents().get((currentLevel-level)*2-1); // <ul><li><ul><li>... <-- go up 2 times per level
+                currentLevel = level;
+            } else {
+                currentList = currentList.parent(); // go to <ul>
+            }
+            Element li = new Element("li");
+            Element a = new Element("a").attr("href","#"+header.attr("id"));
+            a.append(header.html());
+            li.appendChild(a);
+            currentList.appendChild(li);
+            currentList = li;
+        }
+
+        if ( toc.parent() == null && attributes.has("toc")) {
+            Element firstHeader = document.select("h1").first();
+            if (firstHeader != null) {
+                firstHeader.after(toc);
+            } else {
+                document.body().prependChild(toc);
+            }
+        } else {
+            // Add "title" class to toc title
+            toc.select("div#toctitle").addClass("title");
+        }
+        if ( toc.tagName().equals(AsciidocRenderer.TOC.tag())) {
+            ((AsciidocElement)toc).process();
+        }
+
     }
 }
