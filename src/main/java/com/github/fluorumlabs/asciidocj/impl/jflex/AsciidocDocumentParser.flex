@@ -202,9 +202,8 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 String[] parts = yytext().replace("!","").split(":", 3);
                 String value = trimAll(parts[2]);
 
-                if ( attributes.has(parts[1]) ) {
-                    attributes.remove(parts[1]);
-                }
+                attributes.remove(parts[1]);
+                attributes.put(parts[1]+"!","");
             }
 
     ":" {AttributeName} ":" {NoLineFeed}* {Whitespace}+ / "//"
@@ -213,6 +212,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 String value = trimAll(parts[2]);
 
                 attributes.put(parts[1], value);
+                attributes.remove(parts[1]+"!");
             }
 
     ":" {AttributeName} ":" ({NoLineFeed}* "\\" {LineFeed})* {NoLineFeed}* {LineFeed}
@@ -221,6 +221,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 String value = trimAll(parts[2]).replaceAll("\\\\(\\R)","\\1");
 
                 attributes.put(parts[1], value);
+                attributes.remove(parts[1]+"!");
             }
 
     "[[" {NoLineFeed}+ "]]" {LineFeed}
@@ -451,8 +452,8 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                     }
                 }
 
-                if ( id.isEmpty() && level > 1) {
-                    id = "_" + AsciidocRenderer.slugify(formattedTitle.text());
+                if ( id.isEmpty() && level > 1 && !attributes.has("sectids!")) {
+                    id = attributes.optString("idprefix","_") + AsciidocRenderer.slugify(formattedTitle.text()).replace("_",attributes.optString("idseparator","_"));
                     properties.put("id", id);
                 }
 

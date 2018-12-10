@@ -24,7 +24,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 public enum AsciidocRenderer {
     PARAGRAPH_BLOCK(x -> {
         x.tagName("div");
-        if ( x.hasClass("abstract")) {
+        if (x.hasClass("abstract")) {
             x.addClass("quoteblock");
             Element bq = new Element("blockquote");
             moveChildNodes(x, bq);
@@ -85,6 +85,9 @@ public enum AsciidocRenderer {
         int level = Integer.parseInt(x.attr("level"));
         x.removeAttr("level");
         x.removeAttr("id");
+        if (x.hasClass("discrete")) {
+            level = 0;
+        }
         switch (level) {
             case 0:
                 // Pop content to parent
@@ -107,8 +110,8 @@ public enum AsciidocRenderer {
                 break;
             case 2:
                 x.tagName("div").addClass("sect" + Integer.toString(level - 1));
-                if ( x.hasClass("abstract")) x.removeClass("abstract");
-                if ( x.hasClass("appendix")) x.removeClass("appendix");
+                if (x.hasClass("abstract")) x.removeClass("abstract");
+                if (x.hasClass("appendix")) x.removeClass("appendix");
                 Element sectionBody = new Element("div").addClass("sectionbody");
                 // Move all but the first child node
                 moveChildNodesSkipFirst(x, sectionBody);
@@ -126,32 +129,44 @@ public enum AsciidocRenderer {
         Document document = x.ownerDocument();
         x.tagName("h" + x.attr("level"));
         x.removeAttr("level");
-        if ( x.hasClass("abstract")) x.removeClass("abstract");
-        if ( x.hasClass("colophon")) x.removeClass("colophon");
+        if (x.hasClass("abstract")) x.removeClass("abstract");
+        if (x.hasClass("colophon")) x.removeClass("colophon");
 
         // override id
         Element last = x.children().last();
+        Node beforeLast = last == null ? null : last.previousSibling();
+        boolean rewriteId = beforeLast != null && beforeLast instanceof TextNode && ((TextNode) beforeLast).text().endsWith(" ");
         //TODO Fix forward reference to AsciidocRenderer.LINK.tag()
-        if ( last != null && last.tagName().equals("LINK__") && last.hasAttr("id")) {
-            if ( x.hasAttr("id") ) {
-                x.getVariables().put("anchor:"+last.attr("id"), x.getVariables().optString("anchor:"+x.attr("id")));
+        if (last != null && last.tagName().equals("LINK__") && last.hasAttr("id") && rewriteId) {
+            if (x.hasAttr("id")) {
+                x.getVariables().put("anchor:" + last.attr("id"), x.getVariables().optString("anchor:" + x.attr("id")));
             }
             x.attr("id", last.attr("id"));
             last.remove();
             // Also remove trailing space(s) from the last textnode
-            if ( !x.textNodes().isEmpty() ) {
+            if (!x.textNodes().isEmpty()) {
                 TextNode textNode = x.textNodes().get(x.textNodes().size() - 1);
                 textNode.text(trimRight(textNode.text()));
             }
         }
 
-        if ( x.hasClass("appendix") && x.tagName().equals("h2") && !x.attr("sectNum").isEmpty()) {
-            x.prependText(x.getVariables().optString("appendix-caption","Appendix") +" "+x.attr("sectNum")+": ");
-        } else if ( !x.attr("sectNum").isEmpty() ) {
-            x.prependText(x.attr("sectNum")+". ");
+        if (x.hasClass("appendix") && x.tagName().equals("h2") && !x.attr("sectNum").isEmpty()) {
+            x.prependText(x.getVariables().optString("appendix-caption", "Appendix") + " " + x.attr("sectNum") + ": ");
+        } else if (!x.attr("sectNum").isEmpty()) {
+            x.prependText(x.attr("sectNum") + ". ");
         }
         x.removeAttr("sectNum");
         x.removeClass("appendix");
+
+        if (x.getVariables().has("sectanchors") && !x.attr("id").isEmpty()) {
+            Element a = new Element("a").addClass("anchor").attr("href", "#" + x.attr("id"));
+            x.prependChild(a);
+        }
+        if (x.getVariables().has("sectlinks") && !x.attr("id").isEmpty()) {
+            Element a = new Element("a").addClass("link").attr("href", "#" + x.attr("id"));
+            moveChildNodes(x,a);
+            x.appendChild(a);
+        }
 
         if (x.parent() != document.body() || document.select("h1").first() != x) {
             if (x.parent() == document.body()) {
@@ -160,8 +175,8 @@ public enum AsciidocRenderer {
         }
     }),
     TOC(x -> {
-        x.tagName("div").addClass("toc").attr("id","toc");
-        Element div = new Element("div").attr("id","toctitle");
+        x.tagName("div").addClass("toc").attr("id", "toc");
+        Element div = new Element("div").attr("id", "toctitle");
         div.text(x.getVariables().optString("toc-title", "Table of Contents"));
         x.prependChild(div);
     }),
@@ -279,24 +294,24 @@ public enum AsciidocRenderer {
             } else {
                 String idText = x.getVariables().optString("anchor:" + id, "");
 
-                if ( idText.isEmpty() ) {
+                if (idText.isEmpty()) {
                     Element target = x.ownerDocument().select("#" + id).first();
                     if (target != null) {
                         idText = target.text();
                     }
                 }
 
-                if ( idText.isEmpty() ) {
-                    idText = "["+id+"]";
+                if (idText.isEmpty()) {
+                    idText = "[" + id + "]";
                 }
 
                 x.html(idText);
             }
-            if ( x.getVariables().optString("xrefstyle").equals("full") && x.getVariables().has("sectnum:"+id)) {
-                x.prependText(x.getVariables().getString("sectnum:"+id)+", \u201c");
+            if (x.getVariables().optString("xrefstyle").equals("full") && x.getVariables().has("sectnum:" + id)) {
+                x.prependText(x.getVariables().getString("sectnum:" + id) + ", \u201c");
                 x.appendText("\u201d");
-            } else if ( x.getVariables().optString("xrefstyle").equals("short") && x.getVariables().has("sectnum:"+id)) {
-                x.text(x.getVariables().getString("sectnum:"+id));
+            } else if (x.getVariables().optString("xrefstyle").equals("short") && x.getVariables().has("sectnum:" + id)) {
+                x.text(x.getVariables().getString("sectnum:" + id));
             }
         } else {
             if (x.getProperties().has("window")) {
@@ -424,11 +439,11 @@ public enum AsciidocRenderer {
         Element div = new Element("div").addClass("content");
         if (getArgument(x, 0).equals("source") || x.hasClass("source")) {
             String language = getArgument(x, 1);
-            if ( language.isEmpty() ) language=x.getVariables().optString("source-language");
+            if (language.isEmpty()) language = x.getVariables().optString("source-language");
             Element pre = new Element("pre")
                     .addClass("highlight");
 
-            if ( hasOption(x,"nowrap")) {
+            if (hasOption(x, "nowrap")) {
                 pre.addClass("nowrap");
             }
 
@@ -469,43 +484,43 @@ public enum AsciidocRenderer {
         Element title = x.select("TITLE__").first();
         if (title != null) div.before(title);
     }),
-    KEYBOARD( x -> {
-        String contents = x.getProperties().optString("shortcut","");
-        if ( contents.endsWith("+")) contents = stripTail(contents,1)+"\1";
+    KEYBOARD(x -> {
+        String contents = x.getProperties().optString("shortcut", "");
+        if (contents.endsWith("+")) contents = stripTail(contents, 1) + "\1";
         String[] keys = contents.split("\\+");
-        if ( keys.length == 1 ) {
+        if (keys.length == 1) {
             x.tagName("kbd");
-            x.text(contents.replace("\1","+"));
+            x.text(contents.replace("\1", "+"));
         } else {
             x.tagName("span").addClass("keyseq");
             for (String key : keys) {
-                if ( x.childNodeSize() > 0 ) x.appendText("+");
-                x.appendChild(new Element("kbd").text(trim(key.replace("\1","+"))));
+                if (x.childNodeSize() > 0) x.appendText("+");
+                x.appendChild(new Element("kbd").text(trim(key.replace("\1", "+"))));
             }
         }
     }),
-    MENU( x -> {
-        String contents = x.getProperties().optString("submenu","");
-        if ( x.getProperties().has("menu") ) {
+    MENU(x -> {
+        String contents = x.getProperties().optString("submenu", "");
+        if (x.getProperties().has("menu")) {
             contents = x.getProperties().getString("menu") + ">" + contents;
         }
         String[] keys = contents.split(">");
-        if ( keys.length == 1 ) {
+        if (keys.length == 1) {
             x.tagName("b").addClass("menu");
             x.text(trim(keys[0]));
         } else {
             x.tagName("span").addClass("menuseq");
-            for ( int i = 0; i < keys.length; i++) {
+            for (int i = 0; i < keys.length; i++) {
                 String key = trim(keys[i]);
-                if ( i > 0 ) {
+                if (i > 0) {
                     x.appendText("\u00a0"); // nbsp
                     x.appendChild(new Element("b").addClass("caret").text("\u203a"));
                     x.appendText(" ");
                 }
                 Element item = new Element("b").text(key);
-                if ( i == 0 ) {
+                if (i == 0) {
                     item.addClass("menu");
-                } else if ( i < keys.length-1 ) {
+                } else if (i < keys.length - 1) {
                     item.addClass("submenu");
                 } else {
                     item.addClass("menuitem");
@@ -514,8 +529,8 @@ public enum AsciidocRenderer {
             }
         }
     }),
-    BUTTON( x -> {
-        x.tagName("b").addClass("button").text(x.getProperties().optString("button",""));
+    BUTTON(x -> {
+        x.tagName("b").addClass("button").text(x.getProperties().optString("button", ""));
     }),
     TABLE_CELL(Node::remove), // Cell contents is handled by TABLE_BLOCK
     TABLE_BLOCK(x -> {
