@@ -77,7 +77,9 @@ public class AsciidocPropertiesTest {
                 {"id='wrapup'",
                         "{\"id\":\"wrapup\"}"},
                 {"source%nowrap,java",
-                        "{\"options\":{\"nowrap\":\"\"},\"arguments\":[\"source\",\"java\"]}"}
+                        "{\"options\":{\"nowrap\":\"\"},\"arguments\":[\"source\",\"java\"]}"},
+                {"quote, Somebody, Hi there",
+                        "{\"arguments\":[\"quote\",\"Somebody\",\"Hi there\"]}"}
         });
     }
 

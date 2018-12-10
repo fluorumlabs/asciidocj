@@ -488,9 +488,9 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 String id = "";
                 String text = "";
                 String[] data = extractBetween(yytext(), "[[[", "]]]").split(",",2);
-                if ( data.length>0 ) id = data[0];
+                if ( data.length>0 ) id = data[0].trim();
                 if ( data.length>1 ) {
-                    text = data[1];
+                    text = data[1].trim();
                 } else {
                     text = id;
                 }
@@ -516,7 +516,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 
                 if (!text.isEmpty()) {
                     attributes.put("anchor:" + id, "["+text+"]");
-                    appendText("["+text+"]");
+                    appendText("["+text+"] ");
                     appendTextNode();
                 }
 
