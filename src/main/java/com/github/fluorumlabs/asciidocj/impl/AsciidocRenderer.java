@@ -42,7 +42,7 @@ public enum AsciidocRenderer {
     }),
     QUOTE_BLOCK(x -> {
         x.tagName("div").removeClass("quote");
-        if ( x.getProperties().has("verse%")) {
+        if (x.getProperties().has("verse%")) {
             x.addClass("verseblock");
             Element pre = new Element("pre").addClass("content");
             moveChildNodes(x, pre);
@@ -62,7 +62,7 @@ public enum AsciidocRenderer {
             Element div = new Element("div").addClass("attribution");
             div.appendText("\u2014 ");
             div.append(x.getProperties().optString("quote:attribution"));
-            if ( !x.getProperties().optString("quote:cite").isEmpty()) {
+            if (!x.getProperties().optString("quote:cite").isEmpty()) {
                 div.appendChild(new Element("br"));
                 div.appendChild(new Element("cite").html(x.getProperties().optString("quote:cite")));
             }
@@ -103,7 +103,7 @@ public enum AsciidocRenderer {
     }),
     SECTION(x -> {
         int level = Integer.parseInt(x.attr("level"));
-        x.removeClass("bibliography").removeAttr("level").removeAttr("id");
+        x.removeClass("bibliography").removeClass("glossary").removeAttr("level").removeAttr("id");
         if (x.hasClass("discrete")) {
             level = 0;
         }
@@ -148,7 +148,7 @@ public enum AsciidocRenderer {
         Document document = x.ownerDocument();
         x.tagName("h" + x.attr("level"));
         x.removeAttr("level");
-        x.removeClass("abstract").removeClass("colophon").removeClass("bibliography");
+        x.removeClass("abstract").removeClass("glossary").removeClass("colophon").removeClass("bibliography");
 
         // override id
         Element last = x.children().last();
@@ -182,7 +182,7 @@ public enum AsciidocRenderer {
         }
         if (x.getVariables().has("sectlinks") && !x.attr("id").isEmpty()) {
             Element a = new Element("a").addClass("link").attr("href", "#" + x.attr("id"));
-            moveChildNodes(x,a);
+            moveChildNodes(x, a);
             x.appendChild(a);
         }
 
@@ -257,37 +257,40 @@ public enum AsciidocRenderer {
             x.appendChild(ol);
             Element title = x.select("TITLE__").first();
             if (title != null) ol.before(title);
-        } else if ( !x.hasClass("horizontal") ){
-            x.tagName("div").addClass("dlist").removeAttr("level");
-            Element dl = new Element("dl");
-            moveChildNodes(x, dl);
-            x.appendChild(dl);
-            Element title = x.select("TITLE__").first();
-            if (title != null) dl.before(title);
-        } else {
+        } else if (x.hasClass("horizontal")) {
             // Oh boy, horizontal dlist -- let's build a table out of <dt>'s and <dd>'s
             x.tagName("div").addClass("hdlist").removeClass("horizontal").removeAttr("level");
             Element table = new Element("table");
             Element tbody = new Element("tbody");
             Element trow = null;
             for (Element child : x.children()) {
-                if ( child.tagName().equals("DT__")) {
+                if (child.tagName().equals("DT__")) {
                     if (trow != null) {
                         tbody.appendChild(trow);
                     }
                     trow = new Element("tr");
                 }
-                if ( trow != null ) {
+                if (trow != null) {
                     trow.appendChild(child.addClass("horizontal"));
                 } else {
                     child.remove();
                 }
             }
-            if ( trow != null ) {
+            if (trow != null) {
                 tbody.appendChild(trow);
             }
             table.appendChild(tbody);
             x.appendChild(table);
+        } else {
+            x.tagName("div").addClass("dlist").removeAttr("level");
+            if (x.hasClass("glossary")) {
+                x.select("DT__").addClass("glossary");
+            }
+            Element dl = new Element("dl");
+            moveChildNodes(x, dl);
+            x.appendChild(dl);
+            Element title = x.select("TITLE__").first();
+            if (title != null) dl.before(title);
         }
     }),
     DT(x -> {
@@ -301,11 +304,14 @@ public enum AsciidocRenderer {
             li.appendChild(p);
             x.before(li);
             x.remove();
-        } else if ( !x.hasClass("horizontal")){
-            x.tagName("dt").addClass("hdlist1").removeAttr("level");
-        } else {
+        } else if (x.hasClass("glossary")) {
+            x.tagName("dt").removeClass("glossary").removeAttr("level");
+        } else if (x.hasClass("horizontal")) {
             x.tagName("td").addClass("hdlist1").removeClass("horizontal").removeAttr("level");
+        } else {
+            x.tagName("dt").addClass("hdlist1").removeAttr("level");
         }
+
     }),
     DD(x -> {
         if (getArgument(getParent(x), 0).equals("qanda")) {
@@ -313,10 +319,10 @@ public enum AsciidocRenderer {
             Element dt = x.previousElementSibling();
             moveChildNodes(x, dt);
             x.remove();
-        } else if ( !x.hasClass("horizontal")) {
-            x.tagName("dd");
-        } else {
+        } else if (x.hasClass("horizontal")) {
             x.tagName("td").addClass("hdlist2").removeClass("horizontal").removeAttr("level");
+        } else {
+            x.tagName("dd");
         }
     }),
     COL(x -> {
