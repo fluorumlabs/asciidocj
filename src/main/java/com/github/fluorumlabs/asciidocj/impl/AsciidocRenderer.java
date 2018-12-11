@@ -448,7 +448,7 @@ public enum AsciidocRenderer {
         String caption = x.attr("caption");
         x.removeAttr("type").removeAttr("caption");
 
-        if (!caption.isEmpty()) {
+        if (!caption.equals("\0")) {
             x.prependText(caption);
         } else if (!type.isEmpty()) {
             int counter = x.getVariables().optInt("counter:" + type, 1);

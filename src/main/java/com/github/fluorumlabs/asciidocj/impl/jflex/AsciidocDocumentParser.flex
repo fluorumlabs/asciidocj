@@ -247,7 +247,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     "|" [=]{3,128} {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption");
+                String caption = properties.optString("caption","\0");
 
                 tableProperties = properties;
                 openElement(AsciidocRenderer.TABLE_BLOCK);
@@ -276,7 +276,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     [*]{4,128} {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption");
+                String caption = properties.optString("caption","\0");
 
                 openElement(AsciidocRenderer.SIDEBAR_BLOCK);
 
@@ -291,7 +291,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     [=]{4,128} {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption");
+                String caption = properties.optString("caption","\0");
 
                 String admonitionType = null;
                 if (hasClass("NOTE")) admonitionType = "note";
@@ -333,7 +333,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     "--" {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption");
+                String caption = properties.optString("caption","\0");
 
                 if ( hasClass("abstract") ) {
                     openElement(AsciidocRenderer.QUOTE_BLOCK);
@@ -351,7 +351,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     [-]{4,128} {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption");
+                String caption = properties.optString("caption","\0");
 
                 openElement(AsciidocRenderer.LISTING_BLOCK);
 
@@ -367,7 +367,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     [_]{4,128} {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption");
+                String caption = properties.optString("caption","\0");
 
                 if ( getArgument(0).equals("quote") || getArgument(0).equals("verse")) {
                     properties.put("quote:attribution", getFormatted(getArgument(1)).body().html());
@@ -397,7 +397,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     "\"\"" {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption");
+                String caption = properties.optString("caption","\0");
 
                 properties.put("quote:attribution", getFormatted(getArgument(1)).body().html());
                 properties.put("quote:cite", getFormatted(getArgument(2)).body().html());
@@ -422,7 +422,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
         String[] attribution = cite.split(",",2);
 
         String titleHtml = properties.optString("title:html");
-        String caption = properties.optString("caption");
+        String caption = properties.optString("caption","\0");
 
         if ( attribution.length > 0 ) properties.put("quote:attribution", getFormatted(attribution[0].trim()).body().html());
         if ( attribution.length > 1 ) properties.put("quote:cite", getFormatted(attribution[1].trim()).body().html());
@@ -443,7 +443,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     [`]{3,128} {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption");
+                String caption = properties.optString("caption","\0");
 
                 openElement(AsciidocRenderer.LISTING_BLOCK);
 
@@ -758,7 +758,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 if (alt.isEmpty()) alt = extractAfterStrict(extractBeforeStrict(imgUrl, "."), "/");
                 String titleHtml = properties.optString("title:html");
                 String title = properties.optString("title");
-                String caption = properties.optString("caption");
+                String caption = properties.optString("caption","\0");
                 String link = properties.optString("link");
 
                 JSONObject imageProperties = new JSONObject();
@@ -806,7 +806,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 }
 
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption");
+                String caption = properties.optString("caption","\0");
 
                 openElement(AsciidocRenderer.VIDEO_BLOCK).attr("src", videoUrl);
 
@@ -832,7 +832,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 }
 
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption");
+                String caption = properties.optString("caption","\0");
 
                 openElement(AsciidocRenderer.AUDIO_BLOCK).attr("src", audioUrl);
 
@@ -872,7 +872,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     [^]
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption");
+                String caption = properties.optString("caption","\0");
 
                 String admonitionType = null;
                 if (hasClass("NOTE")) admonitionType = "note";

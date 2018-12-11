@@ -3,7 +3,7 @@ package com.github.fluorumlabs.asciidocj.impl.jflex;
 import com.github.fluorumlabs.asciidocj.impl.AsciidocBase;
 import com.github.fluorumlabs.asciidocj.impl.AsciidocRenderer;
 import com.github.fluorumlabs.asciidocj.impl.ParserException;
-import org.json.JSONObject;
+import org.apache.commons.lang3.StringUtils;import org.json.JSONObject;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Entities;
 
@@ -577,6 +577,47 @@ Properties                  = "[" ("\\]"|[^\]\r\n\u2028\u2029\u000B\u000C\u0085\
                     appendText(value==null?yytext():value);
                 }
             }
+
+    /* Counter reset */
+    "{counter:" {AttributeName} ":" ([0-9]+|[a-zA-Z]) "}" |
+    "{counter2:" {AttributeName} ":" ([0-9]+|[a-zA-Z]) "}"
+    {
+                if ( fallback(Pass.ATTRIBUTES) ) break;
+
+                String text = strip(yytext(), 1, 1);
+                String attribute = extractBetween(text,":",":");
+                String initial = extractAfterStrict(text,":");
+
+                if ( text.startsWith("counter:") ) {
+                    appendText(initial);
+                }
+
+                attributes.put(attribute,initial);
+            }
+
+    /* Counter increment */
+    "{counter:" {AttributeName} "}" |
+    "{counter2:" {AttributeName} "}"
+    {
+                    if ( fallback(Pass.ATTRIBUTES) ) break;
+
+                    String text = strip(yytext(), 1, 1);
+                    String attribute = extractAfter(text,":");
+
+                    String value = attributes.optString(attribute, "0");
+
+                    if ( StringUtils.isNumeric(value) ) {
+                        value = Integer.toString(Integer.parseInt(value)+1);
+                    } else if ( value.length() == 1 ){
+                        value = Character.toString((char)(value.charAt(0)+1));
+                    }
+
+                    if ( text.startsWith("counter:") ) {
+                        appendText(value);
+                    }
+
+                    attributes.put(attribute,value);
+                }
 
    "[" [^\[][^\]]+ "]"
     {
