@@ -498,7 +498,17 @@ Properties                  = "[" ("\\]"|[^\]\r\n\u2028\u2029\u000B\u000C\u0085\
                     imageProperties.put("arguments", properties.getJSONArray("arguments"));
                 }
 
+                JSONObject propertiesCopy = properties;
+
                 openElement("span").addClass("image");
+
+                if ( propertiesCopy.has("float")) {
+                    currentElement.addClass(propertiesCopy.getString("float"));
+                }
+                if ( propertiesCopy.has("align")) {
+                    currentElement.addClass("text-"+propertiesCopy.getString("align"));
+                }
+
                 properties = imageProperties;
                 openElement(AsciidocRenderer.IMAGE).attr("src", imgUrl).attr("alt", alt);
                 if (!title.isEmpty()) {

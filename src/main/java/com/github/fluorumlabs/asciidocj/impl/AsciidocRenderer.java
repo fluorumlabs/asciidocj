@@ -386,12 +386,26 @@ public enum AsciidocRenderer {
         Element title = x.select("TITLE__").first();
         Element div = new Element("div").addClass("content");
 
+        if ( x.getProperties().has("float")) {
+            x.addClass(x.getProperties().getString("float"));
+        }
+        if ( x.getProperties().has("align")) {
+            x.addClass("text-"+x.getProperties().getString("align"));
+        }
+
         moveChildNodes(x, div);
         x.appendChild(div);
 
         if (title != null) {
             div.after(title);
         }
+    }),
+    OPEN_BLOCK(x -> {
+        x.tagName("div").addClass("openblock");
+        Element div = new Element("div").addClass("content");
+
+        moveChildNodes(x, div);
+        x.appendChild(div);
     }),
     VIDEO_BLOCK(x -> {
         String src = x.attr("src");
@@ -463,10 +477,18 @@ public enum AsciidocRenderer {
         }
     }),
     IMAGE(x -> {
-        x.tagName("img");
-
         String src = x.attr("src");
-
+        if ( x.getProperties().optString("opts").equals("interactive") && src.endsWith(".svg")) {
+            x.tagName("object").removeAttr("src").attr("data",src).attr("type","image/svg+xml");
+            if ( x.hasAttr("alt") ) {
+                Element span = new Element("span").addClass("alt");
+                span.text(x.attr("alt"));
+                x.removeAttr("alt");
+                x.appendChild(span);
+            }
+        } else {
+            x.tagName("img");
+        }
         if (x.getProperties().has("width")) {
             x.attr("width", x.getProperties().getString("width"));
         } else if (!getArgument(x, 1).isEmpty()) {
@@ -477,9 +499,7 @@ public enum AsciidocRenderer {
         } else if (!getArgument(x, 2).isEmpty()) {
             x.attr("height", getArgument(x, 2));
         }
-        if (x.getProperties().has("title")) {
-            x.attr("title", x.getProperties().getString("title"));
-        }
+
     }),
     TITLE(x -> {
         String type = x.attr("type");
@@ -490,9 +510,15 @@ public enum AsciidocRenderer {
         if (!caption.equals("\0")) {
             x.prependText(caption);
         } else if (!type.isEmpty()) {
-            int counter = x.getVariables().optInt("counter:" + type, 1);
-            x.prependText(String.format("%s %d. ", type, counter));
-            x.getVariables().put("counter:" + type, counter + 1);
+            caption = x.getVariables().optString(type.toLowerCase()+"-caption!", type);
+            if ( x.getVariables().has(type.toLowerCase()+"-caption!")) {
+                caption = "";
+            }
+            if ( !caption.isEmpty() ) {
+                int counter = x.getVariables().optInt("counter:" + type, 1);
+                x.prependText(String.format("%s %d. ", caption, counter));
+                x.getVariables().put("counter:" + type, counter + 1);
+            }
         }
     }),
     LISTING_BLOCK(x -> {

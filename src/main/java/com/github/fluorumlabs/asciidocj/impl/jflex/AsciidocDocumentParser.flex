@@ -337,6 +337,8 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 
                 if ( hasClass("abstract") ) {
                     openElement(AsciidocRenderer.QUOTE_BLOCK);
+                } else {
+                    openElement(AsciidocRenderer.OPEN_BLOCK);
                 }
 
                 if (!titleHtml.isEmpty()) {
@@ -761,6 +763,10 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 String caption = properties.optString("caption","\0");
                 String link = properties.optString("link");
 
+                if ( !title.isEmpty() ) {
+                    titleHtml = getFormatted(title).body().html();
+                }
+
                 JSONObject imageProperties = new JSONObject();
                 if (properties.has("arguments")) {
                     imageProperties.put("arguments", properties.getJSONArray("arguments"));
@@ -771,6 +777,9 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 if (properties.has("height")) {
                     imageProperties.put("height", properties.get("height"));
                 }
+                if (properties.has("opts")) {
+                    imageProperties.put("opts", properties.get("opts"));
+                }
 
                 openElement(AsciidocRenderer.IMAGE_BLOCK);
                 Element root = currentElement;
@@ -779,9 +788,6 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 }
                 properties = imageProperties;
                 openElement(AsciidocRenderer.IMAGE).attr("src", imgUrl).attr("alt", alt);
-                if (!title.isEmpty()) {
-                    currentElement.attr("title", title);
-                }
 
                 currentElement = root;
                 if (!titleHtml.isEmpty()) {
