@@ -342,6 +342,11 @@ public enum AsciidocRenderer {
     }),
     LINK(x -> {
         x.tagName("a");
+        // Extract inner links - they make no sense
+        for (Element sublink : x.select("LINK__")) {
+            moveChildNodesToParent(sublink);
+            sublink.remove();
+        }
         if (x.getProperties().has("to-id")) {
             String id = x.getProperties().getString("to-id");
             x.attr("href", "#" + id);
