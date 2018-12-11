@@ -257,13 +257,37 @@ public enum AsciidocRenderer {
             x.appendChild(ol);
             Element title = x.select("TITLE__").first();
             if (title != null) ol.before(title);
-        } else {
+        } else if ( !x.hasClass("horizontal") ){
             x.tagName("div").addClass("dlist").removeAttr("level");
             Element dl = new Element("dl");
             moveChildNodes(x, dl);
             x.appendChild(dl);
             Element title = x.select("TITLE__").first();
             if (title != null) dl.before(title);
+        } else {
+            // Oh boy, horizontal dlist -- let's build a table out of <dt>'s and <dd>'s
+            x.tagName("div").addClass("hdlist").removeClass("horizontal").removeAttr("level");
+            Element table = new Element("table");
+            Element tbody = new Element("tbody");
+            Element trow = null;
+            for (Element child : x.children()) {
+                if ( child.tagName().equals("DT__")) {
+                    if (trow != null) {
+                        tbody.appendChild(trow);
+                    }
+                    trow = new Element("tr");
+                }
+                if ( trow != null ) {
+                    trow.appendChild(child.addClass("horizontal"));
+                } else {
+                    child.remove();
+                }
+            }
+            if ( trow != null ) {
+                tbody.appendChild(trow);
+            }
+            table.appendChild(tbody);
+            x.appendChild(table);
         }
     }),
     DT(x -> {
@@ -277,8 +301,10 @@ public enum AsciidocRenderer {
             li.appendChild(p);
             x.before(li);
             x.remove();
-        } else {
+        } else if ( !x.hasClass("horizontal")){
             x.tagName("dt").addClass("hdlist1").removeAttr("level");
+        } else {
+            x.tagName("td").addClass("hdlist1").removeClass("horizontal").removeAttr("level");
         }
     }),
     DD(x -> {
@@ -287,8 +313,10 @@ public enum AsciidocRenderer {
             Element dt = x.previousElementSibling();
             moveChildNodes(x, dt);
             x.remove();
-        } else {
+        } else if ( !x.hasClass("horizontal")) {
             x.tagName("dd");
+        } else {
+            x.tagName("td").addClass("hdlist2").removeClass("horizontal").removeAttr("level");
         }
     }),
     COL(x -> {
