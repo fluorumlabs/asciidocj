@@ -162,7 +162,7 @@ public class Utils {
     }
 
     public static Reader getReader(String text, boolean zeroTrail) {
-        return new StringReader(zeroTrail ? trimAll(text) + "\0" : text);
+        return new StringReader(zeroTrail ? text + "\0" : text);
     }
 
     public static void moveChildNodes(Element from, Element to) {

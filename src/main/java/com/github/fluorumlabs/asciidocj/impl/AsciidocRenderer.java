@@ -73,7 +73,7 @@ public enum AsciidocRenderer {
         if (x.hasClass("listing")) {
             x.tagName("div").addClass("listingblock").removeClass("listing");
         } else {
-            x.tagName("div").addClass("literalblock");
+            x.tagName("div").addClass("literalblock").removeClass("literal");
         }
         Element div = new Element("div").addClass("content");
         Element pre = new Element("pre");
@@ -557,7 +557,7 @@ public enum AsciidocRenderer {
         if (title != null) div.before(title);
     }),
     SIDEBAR_BLOCK(x -> {
-        x.tagName("div").addClass("sidebarblock");
+        x.tagName("div").addClass("sidebarblock").removeClass("sidebar");
         Element div = new Element("div").addClass("content");
         moveChildNodes(x, div);
         x.appendChild(div);

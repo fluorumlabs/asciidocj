@@ -158,6 +158,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 %state LIST_PARAGRAPH
 
 %state OPEN_BLOCK
+%state OPEN_LISTING_BLOCK
 %state LITERAL_BLOCK
 %state PASSTHROUGH_BLOCK
 %state SIDEBAR_BLOCK
@@ -334,10 +335,16 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     {
                 String titleHtml = properties.optString("title:html");
                 String caption = properties.optString("caption","\0");
+                boolean isListing = false;
 
-                if ( hasClass("abstract") ) {
+                if ( hasClass("abstract")  || getArgument(0).equals("abstract")) {
                     openElement(AsciidocRenderer.QUOTE_BLOCK);
-                } else {
+                } else if ( hasClass("sidebar")  || getArgument(0).equals("sidebar")) {
+                    openElement(AsciidocRenderer.SIDEBAR_BLOCK);
+                } else if ( hasClass("source") || getArgument(0).equals("source")) {
+                    isListing = true;
+                    openElement(AsciidocRenderer.LISTING_BLOCK);
+                } else{
                     openElement(AsciidocRenderer.OPEN_BLOCK);
                 }
 
@@ -347,7 +354,11 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                     closeElement(AsciidocRenderer.TITLE);
                 }
 
-                yybegin(OPEN_BLOCK);
+                if ( isListing ) {
+                    yybegin(OPEN_LISTING_BLOCK);
+                } else {
+                    yybegin(OPEN_BLOCK);
+                }
             }
 
     [-]{4,128} {LineFeed}
@@ -901,7 +912,18 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 
                     yypushback(1);
                     yybegin(BLOCK);
-                } else if (getArgument(0).equals("source") || getArgument(0).equals("listing")) {
+                } else if (getArgument(0).equals("literal")) {
+                    yypushback(1);
+                    openElement(AsciidocRenderer.LITERAL_BLOCK);
+
+                    if (!titleHtml.isEmpty()) {
+                       openElement(AsciidocRenderer.TITLE).attr("caption", caption)
+                               .html(titleHtml);
+                       closeElement(AsciidocRenderer.TITLE);
+                    }
+
+                    yybegin(LITERAL_PARAGRAPH);
+                 } else if (getArgument(0).equals("source") || getArgument(0).equals("listing")) {
                     yypushback(1);
                     openElement(AsciidocRenderer.LISTING_BLOCK);
 
@@ -1174,7 +1196,7 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
             }
 }
 
-<LISTING_BLOCK, LISTING_PARAGRAPH, LISTING_FENCE_BLOCK> {
+<OPEN_LISTING_BLOCK, LISTING_BLOCK, LISTING_PARAGRAPH, LISTING_FENCE_BLOCK> {
     "//" {Whitespace}* "<" [1-9][0-9+]* ">" |
     "#" {Whitespace}* "<" [1-9][0-9+]* ">" |
     ";;" {Whitespace}* "<" [1-9][0-9+]* ">"
@@ -1328,5 +1350,14 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     {NoLineFeed}* {LineFeed}
     {
                 appendText(yytext());
+            }
+}
+
+<OPEN_LISTING_BLOCK> {
+    {Whitespace}* {LineFeed}* "--" {LineFeed}
+    {
+                appendTextNode();
+                closeBlockElement();
+                yybegin(NEWLINE);
             }
 }
