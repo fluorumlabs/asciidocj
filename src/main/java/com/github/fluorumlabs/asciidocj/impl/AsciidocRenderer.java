@@ -199,9 +199,11 @@ public enum AsciidocRenderer {
         x.prependChild(div);
     }),
     UL(x -> {
+        Set<String> classes = x.classNames();
         x.removeAttr("level");
         x.tagName("div").addClass("ulist");
         Element ul = new Element("ul");
+        ul.classNames(classes);
         if (x.getProperties().optBoolean("%checklist")) {
             x.addClass("checklist");
             ul.addClass("checklist");
@@ -218,33 +220,53 @@ public enum AsciidocRenderer {
     }),
     OL(x -> {
         int level = Integer.parseInt(x.attr("level"));
+        Set<String> classes = x.classNames();
         x.removeAttr("level");
         x.tagName("div").addClass("olist");
         Element ol = new Element("ol");
+        ol.classNames(classes);
+        if (x.getProperties().has("start")) {
+            ol.attr("start", x.getProperties().getString("start"));
+        }
+        if (hasOption(x, "reversed")) {
+            ol.attr("reversed", true);
+        }
         moveChildNodes(x, ol);
         x.appendChild(ol);
-        switch (level) {
-            case 1:
-                x.addClass("arabic");
-                ol.addClass("arabic");
-                break;
-            case 2:
-                x.addClass("loweralpha");
-                ol.addClass("loweralpha").attr("type", "a");
-                break;
-            case 3:
-                x.addClass("lowerroman");
-                ol.addClass("lowerroman").attr("type", "i");
-                break;
-            case 4:
-                x.addClass("upperalpha");
-                ol.addClass("upperalpha").attr("type", "A");
-                break;
-            case 5:
-            default:
-                x.addClass("upperroman");
-                ol.addClass("upperroman").attr("type", "I");
-                break;
+        if (ol.hasClass("arabic")) {
+            // do nothing
+        } else if (ol.hasClass("loweralpha")) {
+            ol.attr("type", "a");
+        } else if (ol.hasClass("lowerroman")) {
+            ol.attr("type", "i");
+        } else if (ol.hasClass("upperalpha")) {
+            ol.attr("type", "A");
+        } else if (ol.hasClass("upperroman")) {
+            ol.attr("type", "I");
+        } else {
+            switch (level) {
+                case 1:
+                    x.addClass("arabic");
+                    ol.addClass("arabic");
+                    break;
+                case 2:
+                    x.addClass("loweralpha");
+                    ol.addClass("loweralpha").attr("type", "a");
+                    break;
+                case 3:
+                    x.addClass("lowerroman");
+                    ol.addClass("lowerroman").attr("type", "i");
+                    break;
+                case 4:
+                    x.addClass("upperalpha");
+                    ol.addClass("upperalpha").attr("type", "A");
+                    break;
+                case 5:
+                default:
+                    x.addClass("upperroman");
+                    ol.addClass("upperroman").attr("type", "I");
+                    break;
+            }
         }
         Element title = x.select("TITLE__").first();
         if (title != null) ol.before(title);
@@ -336,9 +358,14 @@ public enum AsciidocRenderer {
     LIST_ITEM(x -> {
         x.tagName("li");
         x.removeAttr("level");
+        x.removeAttr("class");
     }),
     P(x -> {
-        x.tagName("p");
+        if ( !x.hasAttr("keep")) {
+            x.remove();
+        } else {
+            x.tagName("p").removeAttr("keep");
+        }
     }),
     LINK(x -> {
         x.tagName("a");
@@ -386,11 +413,11 @@ public enum AsciidocRenderer {
         Element title = x.select("TITLE__").first();
         Element div = new Element("div").addClass("content");
 
-        if ( x.getProperties().has("float")) {
+        if (x.getProperties().has("float")) {
             x.addClass(x.getProperties().getString("float"));
         }
-        if ( x.getProperties().has("align")) {
-            x.addClass("text-"+x.getProperties().getString("align"));
+        if (x.getProperties().has("align")) {
+            x.addClass("text-" + x.getProperties().getString("align"));
         }
 
         moveChildNodes(x, div);
@@ -478,9 +505,9 @@ public enum AsciidocRenderer {
     }),
     IMAGE(x -> {
         String src = x.attr("src");
-        if ( x.getProperties().optString("opts").equals("interactive") && src.endsWith(".svg")) {
-            x.tagName("object").removeAttr("src").attr("data",src).attr("type","image/svg+xml");
-            if ( x.hasAttr("alt") ) {
+        if (x.getProperties().optString("opts").equals("interactive") && src.endsWith(".svg")) {
+            x.tagName("object").removeAttr("src").attr("data", src).attr("type", "image/svg+xml");
+            if (x.hasAttr("alt")) {
                 Element span = new Element("span").addClass("alt");
                 span.text(x.attr("alt"));
                 x.removeAttr("alt");
@@ -510,11 +537,11 @@ public enum AsciidocRenderer {
         if (!caption.equals("\0")) {
             x.prependText(caption);
         } else if (!type.isEmpty()) {
-            caption = x.getVariables().optString(type.toLowerCase()+"-caption!", type);
-            if ( x.getVariables().has(type.toLowerCase()+"-caption!")) {
+            caption = x.getVariables().optString(type.toLowerCase() + "-caption!", type);
+            if (x.getVariables().has(type.toLowerCase() + "-caption!")) {
                 caption = "";
             }
-            if ( !caption.isEmpty() ) {
+            if (!caption.isEmpty()) {
                 int counter = x.getVariables().optInt("counter:" + type, 1);
                 x.prependText(String.format("%s %d. ", caption, counter));
                 x.getVariables().put("counter:" + type, counter + 1);

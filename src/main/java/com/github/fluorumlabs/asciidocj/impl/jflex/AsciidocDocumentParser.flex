@@ -202,6 +202,21 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     {
             }
 
+    {LineFeed}* "+" {LineFeed} {
+        if ( !currentElement.tagName().equals(AsciidocRenderer.LIST_ITEM.tag())) {
+            closeToElement(AsciidocRenderer.LIST_ITEM);
+        }
+        if ( currentElement.tagName().equals(AsciidocRenderer.LIST_ITEM.tag()) ) {
+            int level = Integer.parseInt(currentElement.attr("level")) - (yytext().length()-2);
+            Element targetListItem = currentElement;
+            while (targetListItem != null &&
+                (!targetListItem.tagName().equals(AsciidocRenderer.LIST_ITEM.tag()) || !targetListItem.attr("level").equals(Integer.toString(level)))) {
+                targetListItem = targetListItem.parent();
+            }
+            if ( targetListItem != null ) currentElement = targetListItem;
+        }
+      }
+
     ":!" {AttributeName} ":" {Whitespace}* {LineFeed} |
     ":" {AttributeName} "!:" {Whitespace}* {LineFeed}
     {
@@ -980,18 +995,14 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
     {LineFeed}? ":" {AttributeName} ":" |
     {LineFeed}? ":!" {AttributeName} ":" |
     {LineFeed}? ":" {AttributeName} "!:" |
-    {LineFeed}? {Properties} {LineFeed}
-    {
+    {LineFeed}? {Properties} {LineFeed} |
+    {LineFeed}* "+" {LineFeed}
+        {
                 yypushback(yytext().length());
                 appendFormatted();
-                Element parent = currentElement.parent();
-                if (currentElement.tagName().equals(AsciidocRenderer.P.tag()) && currentElement.text().isEmpty()) {
-                    currentElement.remove();
-                }
-                currentElement = parent;
+                currentElement = currentElement.parent();
                 yybegin(NEWLINE);
             }
-
 }
 
 <BLOCK> {
@@ -1056,6 +1067,9 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 
     {NoLineFeed}+ {LineFeed}
     {
+                if ( currentElement.tagName().equals(AsciidocRenderer.P.tag())) {
+                    currentElement.attr("keep", true);
+                }
                 if (!getText().isEmpty()) {
                     appendText("\n");
                 }
