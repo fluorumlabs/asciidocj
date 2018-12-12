@@ -1,20 +1,18 @@
 package com.github.fluorumlabs.asciidocj.impl;
 
 import com.github.slugify.Slugify;
-import org.apache.commons.lang3.StringUtils;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
+import org.jsoup.select.Elements;
 
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 
@@ -365,7 +363,7 @@ public enum AsciidocRenderer {
         x.removeAttr("class");
     }),
     P(x -> {
-        if ( !x.hasAttr("keep")) {
+        if (!x.hasAttr("keep")) {
             x.remove();
         } else {
             x.tagName("p").removeAttr("keep");
@@ -654,71 +652,81 @@ public enum AsciidocRenderer {
     TABLE_BLOCK(x -> {
         DecimalFormat widthFormatter = new DecimalFormat("#.####");
 
-        List<Set<Character>> columnFormat = new ArrayList<>();
-        List<Integer> columnWidths = new ArrayList<>();
-
-        if (x.getProperties().has("cols")) {
-            for (String format : x.getProperties().getString("cols").split(",")) {
-                int count = 1;
-                String[] split = format.split("\\*", 2);
-                if (format.contains("*") && StringUtils.isNumeric(split[0])) {
-                    count = Integer.valueOf(split[0]);
-                    format = split.length == 2 ? split[1] : "";
-                }
-
-                String width = unskipLeft(format, "0123456789");
-                int witdhFactor = 1;
-                if (StringUtils.isNumeric(width)) {
-                    witdhFactor = Integer.valueOf(width);
-                }
-
-                for (int i = 0; i < count; i++) {
-                    // Collect formatting characters to a set
-                    columnFormat.add(format.codePoints().mapToObj(c -> (char) c).collect(Collectors.toSet()));
-                    columnWidths.add(witdhFactor);
-                }
-            }
-        } else {
+        JSONArray columns = x.getProperties().optJSONArray("columns:");
+        if (columns == null) {
+            columns = new JSONArray();
             for (int i = 0; i < x.getProperties().optInt("firstRowCellCount", x.childNodeSize()); i++) {
-                columnFormat.add(Collections.emptySet());
-                columnWidths.add(1);
+                columns.put(new JSONObject());
             }
         }
 
-        x.tagName("table").addClass("frame-all")
-                .addClass("grid-all")
+        x.tagName("table").addClass("frame-" + x.getProperties().optString("frame", "all"))
+                .addClass("grid-" + x.getProperties().optString("grid", "all"))
                 .addClass("tableblock");
 
-        if (x.getProperties().has("width")) {
+        if (x.getProperties().has("stripes")) {
+            x.addClass("stripes-" + x.getProperties().getString("stripes"));
+        }
+
+        if (x.getProperties().has("width") ) {
             x.attr("style", "width: " + x.getProperties().getString("width") + ";");
+        } else if ( hasOption(x,"autowidth") ) {
+            x.addClass("fit-content");
         } else {
             x.addClass("stretch");
         }
 
         Element colGroup = new Element("colgroup");
         float totalWidth = 0;
-        int totalWidthFactor = columnWidths.stream().mapToInt(Integer::intValue).sum();
-        for (int i = 0; i < columnFormat.size() - 1; i++) {
-            float width = Math.round(1000000f * columnWidths.get(i) / totalWidthFactor) / 10000f;
-            totalWidth += width;
-            colGroup.appendChild(new Element("col").attr("style", String.format("width: %s%%;", widthFormatter.format(width))));
+        int totalWidthFactor = StreamSupport.stream(columns.spliterator(), false)
+                .filter(o -> !((JSONObject) o).optBoolean("autowidth"))
+                .mapToInt(o -> ((JSONObject) o).optInt("width", 1)).sum();
+        boolean hasAutowidth = hasOption(x,"autowidth") || StreamSupport.stream(columns.spliterator(), false)
+                .anyMatch(o -> ((JSONObject) o).optBoolean("autowidth"));
+
+        if (hasAutowidth) {
+            for (int i = 0; i < columns.length(); i++) {
+                if (columns.getJSONObject(i).has("width")) {
+                    colGroup.appendChild(new Element("col").attr("style", String.format("width: %d%%;", columns.getJSONObject(i).getInt("width"))));
+                } else {
+                    colGroup.appendChild(new Element("col"));
+                }
+            }
+        } else {
+            for (int i = 0; i < columns.length() - 1; i++) {
+                float width = Math.round(1000000f * columns.getJSONObject(i).optInt("width", 1) / totalWidthFactor) / 10000f;
+                totalWidth += width;
+                colGroup.appendChild(new Element("col").attr("style", String.format("width: %s%%;", widthFormatter.format(width))));
+            }
+            colGroup.appendChild(new Element("col").attr("style", String.format("width: %s%%;", widthFormatter.format(100 - totalWidth))));
         }
-        colGroup.appendChild(new Element("col").attr("style", String.format("width: %s%%;", widthFormatter.format(100 - totalWidth))));
         Element tbody = new Element("tbody");
         Element thead = null;
         Element trow = null;
         boolean isHead = false;
 
         JSONObject options = x.getProperties().optJSONObject("options");
+        boolean hasHeadRow = (options != null && options.has("header"))
+                || (x.getProperties().optInt("firstRowCellCount", 0) == columns.length()
+                && x.getProperties().optInt("headerCellCount", 0) == columns.length());
+
+        boolean hasFootRow = options != null && options.has("footer");
 
         // Lay cells in row/columns
         int rowCounter = 0;
         int columnCounter = 0;
         for (Element cell : x.select(TABLE_CELL.tag())) {
-            if (trow == null) {
+            // overlay local styles
+            JSONObject columnFormat = columns.getJSONObject(columnCounter);
+            JSONObject cellFormat = ((AsciidocElement) cell).getProperties().getJSONObject("format");
+            for (String key : columnFormat.keySet()) {
+                if (!cellFormat.has(key)) {
+                    cellFormat.put(key, columnFormat.get(key));
+                }
+            }
 
-                if ((x.getProperties().optInt("headerCellCount", 0) > 0 || (options != null && options.has("header")))
-                        && rowCounter == 0) {
+            if (trow == null) {
+                if (hasHeadRow && rowCounter == 0) {
                     thead = new Element("thead");
                     trow = new Element("tr");
                     isHead = true;
@@ -729,31 +737,66 @@ public enum AsciidocRenderer {
                 rowCounter++;
                 columnCounter = 0;
             }
-            Element tcell = new Element(isHead ? "th" : "td");
-            tcell.addClass("halign-left").addClass("tableblock").addClass("valign-top");
+            Element tcell = new Element(isHead||cellFormat.optBoolean("header") ? "th" : "td");
+            tcell.addClass("tableblock");
+            tcell.addClass("halign-" + cellFormat.optString("halign", "left"));
+            tcell.addClass("valign-" + cellFormat.optString("valign", "top"));
 
-            Element content = cell.select(PARAGRAPH_BLOCK.tag()).first();
-            if (columnFormat.get(columnCounter).contains('a') && !isHead) {
+            Elements content = cell.select(PARAGRAPH_BLOCK.tag());
+            if (cellFormat.optBoolean("asciidoc") && !isHead) {
                 Element target = new Element("div").addClass("content");
                 moveChildNodes(cell, target);
                 tcell.appendChild(target);
             } else if (content != null) {
                 if (isHead) {
-                    moveChildNodes(content, tcell);
+                    for (Element element : content) {
+                        moveChildNodes(element, tcell);
+                    }
                 } else {
-                    Element target = new Element("p").addClass("tableblock");
-                    moveChildNodes(content, target);
-                    tcell.appendChild(target);
+                    for (Element element : content) {
+                        Element p = new Element("p").addClass("tableblock");
+                        Element target = p;
+                        if ( cellFormat.optBoolean("verse")) {
+                            target.tagName("div").addClass("verse").removeClass("tableblock");
+                        }
+                        if ( cellFormat.optBoolean("literal")) {
+                            target.tagName("div").addClass("literal").removeClass("tableblock");
+                            Element n = new Element("pre");
+                            target.appendChild(n);
+                            target = n;
+                        }
+                        if ( cellFormat.optBoolean("em")) {
+                            Element n = new Element("em");
+                            target.appendChild(n);
+                            target = n;
+                        }
+                        if ( cellFormat.optBoolean("monospace")) {
+                            Element n = new Element("code");
+                            target.appendChild(n);
+                            target = n;
+                        }
+                        if ( cellFormat.optBoolean("strong")) {
+                            Element n = new Element("strong");
+                            target.appendChild(n);
+                            target = n;
+                        }
+                        moveChildNodes(element, target);
+                        if (target != p ) {
+                            p.appendChild(target);
+                        }
+                        tcell.appendChild(p);
+                    }
                 }
             }
             trow.appendChild(tcell);
             columnCounter++;
-            if (columnCounter >= columnFormat.size()) {
+            if (columnCounter >= columns.length()) {
                 if (isHead) {
                     thead.appendChild(trow);
                 } else {
                     tbody.appendChild(trow);
                 }
+                columnCounter = 0;
                 trow = null;
             }
         }
@@ -769,6 +812,14 @@ public enum AsciidocRenderer {
         x.appendChild(colGroup);
         if (thead != null) x.appendChild(thead);
         x.appendChild(tbody);
+        if (hasFootRow) {
+            trow = tbody.select("tr").last();
+            if (trow != null) {
+                Element tfoot = new Element("tfoot");
+                tfoot.appendChild(trow);
+                x.appendChild(tfoot);
+            }
+        }
     });
 
     // This entity does not exist :)

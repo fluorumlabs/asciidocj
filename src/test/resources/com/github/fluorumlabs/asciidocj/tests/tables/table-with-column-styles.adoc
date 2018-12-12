@@ -1,12 +1,18 @@
-[cols="h,m,s,e"]
+[cols="h,m,s,e,v,l,a"]
 |===
 |Cell in column 1, row 1
 |Cell in column 2, row 1
 |Cell in column 3, row 1
 |Cell in column 4, row 1
+|Cell in column 5, row 1
+|Cell in column 6, row 1
+|Cell in column 7, row 1
 
 |Cell in column 1, row 2
 |Cell in column 2, row 2
 |Cell in column 3, row 2
 |Cell in column 4, row 2
+|Cell in column 5, row 1
+|Cell in column 6, row 1
+|Cell in column 7, row 1
 |===

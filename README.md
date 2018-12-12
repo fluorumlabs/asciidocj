@@ -64,6 +64,8 @@ experimental = true
 - Support for block nesting is limited
 - Pass-through blocks (`++++`) are considered as blocks: all non closed html tags are closed automatically. This means that they
   can't be used to create complex HTML layouts.
+- Table cells are always treated as asciidoc fragments, but only paragraphs are outputted if no `a` is specified
+- Nested tables are not supported
 
 ## Internals
 

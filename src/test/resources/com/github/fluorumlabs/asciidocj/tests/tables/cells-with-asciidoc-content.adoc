@@ -1,4 +1,4 @@
-[cols="2"]
+[cols="2*e"]
 |===
 
 a|This cell is prefixed with an `a`, so the processor interpets the following lines as an AsciiDoc list.
@@ -8,9 +8,7 @@ a|This cell is prefixed with an `a`, so the processor interpets the following li
 * List item 3
 |This cell *is not* prefixed with an `a`, so the processor does not interpret the following lines as an AsciiDoc list.
 
-* List item 1
-* List item 2
-* List item 3
+AsciidocJ always treats cell contents as asciidoc, but outputs only paragraphs if no `a` is specified.
 
 a|This cell is prefixed with an `a`, so the processor honors the `lead` style on the following paragraph.
 
@@ -18,6 +16,5 @@ a|This cell is prefixed with an `a`, so the processor honors the `lead` style on
 I am a paragraph styled with the lead attribute.
 |This cell *is not* prefixed with an `a`, so the processor does not honor the `lead` style on the following paragraph.
 
-[.lead]
-I am a paragraph styled with the lead attribute.
+I am a paragraph not styled with the lead attribute.
 |===

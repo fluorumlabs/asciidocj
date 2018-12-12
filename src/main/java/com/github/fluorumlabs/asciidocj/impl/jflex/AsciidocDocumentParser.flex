@@ -3,7 +3,9 @@ package com.github.fluorumlabs.asciidocj.impl.jflex;
 import com.github.fluorumlabs.asciidocj.impl.AsciidocBase;
 import com.github.fluorumlabs.asciidocj.impl.AsciidocRenderer;
 import com.github.fluorumlabs.asciidocj.impl.ParserException;
-import org.apache.commons.lang3.StringUtils;import org.json.JSONObject;
+import org.apache.commons.lang3.StringUtils;
+import org.json.JSONObject;
+import org.json.JSONArray;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
@@ -155,6 +157,14 @@ AttributeName               = [A-Za-z0-9_][A-Za-z0-9_-]*
 
 AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 
+TCDuplicate                 = [1-9][0-9]* "*"
+TCSpanColumn                = [1-9][0-9]* "+"
+TCSpanRow                   = [1-9][0-9]* "."
+TCAlign                     = "."? [\^<>]
+TCFormat                    = [aehlmdsv]
+
+CellFormat                  = {TCDuplicate}? ({TCSpanColumn}|{TCSpanRow})* ({TCAlign}|{TCFormat})*
+
 %state NEWLINE
 
 %state BLOCK
@@ -269,6 +279,20 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 String titleHtml = properties.optString("title:html");
                 String caption = properties.optString("caption","\0");
 
+                if ( !properties.optString("cols").isEmpty() ) {
+                    if ( StringUtils.isNumeric(properties.optString("cols"))) {
+                        int n = Integer.parseInt(properties.optString("cols"));
+                        JSONArray columns = new JSONArray();
+                        JSONObject column = new JSONObject();
+                        for ( int i = 0; i < n; i++ ) {
+                            columns.put(column);
+                        }
+                        properties.put("columns:", columns);
+                    } else {
+                        properties.put("columns:", ColumnFormatParser.parse(properties.optString("cols")));
+                    }
+                }
+
                 tableProperties = properties;
                 openElement(AsciidocRenderer.TABLE_BLOCK);
 
@@ -280,6 +304,9 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                 }
 
                 tableCellCounter = 0;
+                // Push pack line feed
+                yypushback(1);
+
                 yybegin(TABLE_BLOCK);
             }
 
@@ -1320,17 +1347,18 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                     tableProperties.put("firstRowCellCount", tableCellCounter);
                 }
 
-                if (!tableProperties.has("headerCellCount") && tableCellCounter > 0) {
+                if (!tableProperties.has("headerCellCount") ) {
                     tableProperties.put("headerCellCount", tableCellCounter);
                 }
             }
 
-    "|" [=]{0,2}[^=|] |
-    "|"
+    {CellFormat} "|" [=]{0,2}[^=|] |
+    {CellFormat} "|"
     {
                 tableCellCounter++;
+                properties.put("format",CellFormatParser.parse(extractBeforeStrict(yytext(),"|")));
                 openElement(AsciidocRenderer.TABLE_CELL);
-                yypushback(yytext().length() - 1);
+                yypushback(yytext().length() - yytext().indexOf("|") - 1);
                 yybegin(TABLE_CELL);
             }
 
@@ -1347,15 +1375,19 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 }
 
 <TABLE_CELL> {
-    "|" |
-    {LineFeed} "|" |
-    {LineFeed} {Whitespace}* {LineFeed} "|"
+    {CellFormat} "|" |
+    {LineFeed} {CellFormat} "|" |
+    {LineFeed} {Whitespace}* {LineFeed} {CellFormat} "|"
     {
                 appendSubdocument(getTextAndClear());
                 closeElement(AsciidocRenderer.TABLE_CELL);
                 yypushback(yytext().length());
                 yybegin(TABLE_BLOCK);
             }
+
+    "\\|" {
+          appendText("|");
+      }
 
     [^]
     {
