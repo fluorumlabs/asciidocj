@@ -40,6 +40,10 @@ public enum AsciidocRenderer {
             if (title != null) p.before(title);
         }
     }),
+    PASSTHROUGH_BLOCK(x -> {
+        x.after(x.text());
+        x.remove();
+    }),
     QUOTE_BLOCK(x -> {
         x.tagName("div").removeClass("quote");
         if (x.getProperties().has("verse%")) {

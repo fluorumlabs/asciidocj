@@ -68,6 +68,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
                     if ( !passString.contains("r") ) disabled.add(Pass.REPLACEMENTS);
                     if ( !passString.contains("m") ) disabled.add(Pass.MACROS);
                     if ( !passString.contains("p") ) disabled.add(Pass.POST_REPLACEMENTS);
+                    attributes.remove(":pass");
                 }
 
                 try {
@@ -566,7 +567,7 @@ Properties                  = "[" ("\\]"|[^\]\r\n\u2028\u2029\u000B\u000C\u0085\
 
     {LineFeed}
     {
-                if (hasOption("hardbreaks") && !yytext().equals("\0")) {
+                if ((hasOption("hardbreaks") || attributes.has("hardbreaks")) && !yytext().equals("\0")) {
                     appendElement("br");
                 }
                 appendText("\n");

@@ -103,7 +103,11 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
      */
     private void appendFormatted() throws ParserException {
         if (formatter == null) formatter = new AsciidocFormatter();
-        appendDocument(formatter.parse(trimAll(getTextAndClear()), new JSONObject(), attributes));
+        JSONObject shadowProperties = new JSONObject();
+        if ( currentProperties.has("options") ) {
+            shadowProperties.put("options", currentProperties.get("options"));
+        }
+        appendDocument(formatter.parse(trimAll(getTextAndClear()), shadowProperties, attributes));
     }
 
     /**
@@ -970,6 +974,12 @@ AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
                     } else {
                         yybegin(BLOCK);
                     }
+                } else if (getArgument(0).equals("pass") ) {
+                    attributes.put(":pass","");
+                    openElement(AsciidocRenderer.PASSTHROUGH_BLOCK);
+
+                    yypushback(1);
+                    yybegin(BLOCK);
                 } else {
                     openElement(AsciidocRenderer.PARAGRAPH_BLOCK);
 
