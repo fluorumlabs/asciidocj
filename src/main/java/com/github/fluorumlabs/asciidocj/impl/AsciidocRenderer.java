@@ -10,6 +10,8 @@ import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.StreamSupport;
@@ -715,6 +717,9 @@ public enum AsciidocRenderer {
         // Lay cells in row/columns
         int rowCounter = 0;
         int columnCounter = 0;
+
+        List<boolean[]> occupiedCells = new ArrayList<>();
+
         for (Element cell : x.select(TABLE_CELL.tag())) {
             // overlay local styles
             JSONObject columnFormat = columns.getJSONObject(columnCounter);
@@ -734,13 +739,32 @@ public enum AsciidocRenderer {
                     trow = new Element("tr");
                     isHead = false;
                 }
-                rowCounter++;
-                columnCounter = 0;
             }
+
+            int spanRow = cellFormat.optInt("spanRow",1);
+            int spanColumn = cellFormat.optInt("spanColumn",1);
+            while ( occupiedCells.size() < rowCounter+spanRow+1 ) {
+                occupiedCells.add(new boolean[columns.length()]);
+            }
+
+            for ( int i = 0; i < spanRow; i++ ) {
+                for ( int j = 0; j < spanColumn; j++) {
+                    if ( columnCounter+j < columns.length()) {
+                        occupiedCells.get(rowCounter + i)[columnCounter + j] = true;
+                    }
+                }
+            }
+
             Element tcell = new Element(isHead||cellFormat.optBoolean("header") ? "th" : "td");
             tcell.addClass("tableblock");
             tcell.addClass("halign-" + cellFormat.optString("halign", "left"));
             tcell.addClass("valign-" + cellFormat.optString("valign", "top"));
+            if ( spanColumn > 1 ) {
+                tcell.attr("colspan",Integer.toString(spanColumn));
+            }
+            if ( spanRow > 1 ) {
+                tcell.attr("rowspan",Integer.toString(spanRow));
+            }
 
             Elements content = cell.select(PARAGRAPH_BLOCK.tag());
             if (cellFormat.optBoolean("asciidoc") && !isHead) {
@@ -789,15 +813,25 @@ public enum AsciidocRenderer {
                 }
             }
             trow.appendChild(tcell);
-            columnCounter++;
-            if (columnCounter >= columns.length()) {
-                if (isHead) {
-                    thead.appendChild(trow);
-                } else {
-                    tbody.appendChild(trow);
+            // skip pre-occupied cells
+            boolean foundSlot = false;
+            while (!foundSlot) {
+                columnCounter++;
+                if (columnCounter >= columns.length()) {
+                    if ( trow != null ) {
+                        if (isHead) {
+                            thead.appendChild(trow);
+                        } else {
+                            tbody.appendChild(trow);
+                        }
+                    } else {
+                        tbody.appendChild(new Element("tr"));
+                    }
+                    rowCounter++;
+                    columnCounter = 0;
+                    trow = null;
                 }
-                columnCounter = 0;
-                trow = null;
+                foundSlot = !occupiedCells.get(rowCounter)[columnCounter];
             }
         }
 

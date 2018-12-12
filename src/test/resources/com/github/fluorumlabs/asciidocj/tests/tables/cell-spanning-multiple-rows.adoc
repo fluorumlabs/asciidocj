@@ -1,0 +1,15 @@
+// This doesn't work in AsciiDoctor
+////
+|===
+
+|Column 1 |Column 2
+
+2.3+|Spanned content
+
+| Content 1
+| Content 2
+| Content 1
+| Content 2
+
+|===
+////

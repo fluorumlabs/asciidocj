@@ -158,12 +158,11 @@ AttributeName               = [A-Za-z0-9_][A-Za-z0-9_-]*
 AdmonitionType              = "NOTE"|"TIP"|"IMPORTANT"|"WARNING"|"CAUTION"
 
 TCDuplicate                 = [1-9][0-9]* "*"
-TCSpanColumn                = [1-9][0-9]* "+"
-TCSpanRow                   = [1-9][0-9]* "."
+TCSpan                      = (([1-9][0-9]*)? ".")? [1-9][0-9]* "+"
 TCAlign                     = "."? [\^<>]
 TCFormat                    = [aehlmdsv]
 
-CellFormat                  = {TCDuplicate}? ({TCSpanColumn}|{TCSpanRow})* ({TCAlign}|{TCFormat})*
+CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
 %state NEWLINE
 
@@ -1379,8 +1378,17 @@ CellFormat                  = {TCDuplicate}? ({TCSpanColumn}|{TCSpanRow})* ({TCA
     {LineFeed} {CellFormat} "|" |
     {LineFeed} {Whitespace}* {LineFeed} {CellFormat} "|"
     {
-                appendSubdocument(getTextAndClear());
+                String source = getTextAndClear();
+                int duplicates = currentProperties.getJSONObject("format").optInt("duplicate",1);
+                appendSubdocument(source);
                 closeElement(AsciidocRenderer.TABLE_CELL);
+                for ( int i = 1; i < duplicates; i++ ) {
+                    properties = currentProperties;
+                    tableCellCounter++;
+                    openElement(AsciidocRenderer.TABLE_CELL);
+                    appendSubdocument(source);
+                    closeElement(AsciidocRenderer.TABLE_CELL);
+                }
                 yypushback(yytext().length());
                 yybegin(TABLE_BLOCK);
             }

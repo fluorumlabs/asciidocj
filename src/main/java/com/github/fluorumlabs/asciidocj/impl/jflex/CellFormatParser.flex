@@ -58,12 +58,19 @@ TCFormat                    = [aehlmdsv]
         format.put("duplicate", Integer.parseInt(stripTail(yytext(),1)));
       }
 
-    {TCSpanColumn} {
+    [1-9][0-9]* "+"
+    {
         format.put("spanColumn", Integer.parseInt(stripTail(yytext(),1)));
       }
 
-    {TCSpanRow} {
-        format.put("spanRow", Integer.parseInt(stripTail(yytext(),1)));
+    [1-9][0-9]* / "."
+    {
+        format.put("spanColumn", Integer.parseInt(yytext()));
+      }
+
+    "." [1-9][0-9]* "+"
+     {
+        format.put("spanRow", Integer.parseInt(strip(yytext(),1,1)));
       }
 
     {TCAlign} {
