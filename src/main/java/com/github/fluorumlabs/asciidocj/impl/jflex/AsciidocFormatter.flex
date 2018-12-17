@@ -206,7 +206,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
                     appendDocument(formatter.parse(text, properties, attributes));
                 }
 
-                private static final String QUOTED_EXTRACT_REGEXP = "^[\1]([\\s\\S]*?[\\S\1])[\1]([^\1\\w]|$)";
+                private static final String QUOTED_EXTRACT_REGEXP = "^[\1]([\\s\\S]*?[^\\s\1])[\1]([^\1\\w]|$)";
 
                 private String extractQuoted(String x, char marker) {
                     String pattern = QUOTED_EXTRACT_REGEXP.replace('\1', marker);
@@ -799,7 +799,7 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
 
    "[" [^\[][^\]]+ "]"
     {
-                if ( fallback(Pass.ATTRIBUTES) ) break;
+                if ( fallback(Pass.QUOTES) ) break;
 
                 String text = strip(yytext(), 1, 1);
                 PropertiesParser.parse(text, properties, true);
