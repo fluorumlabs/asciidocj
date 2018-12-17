@@ -1122,6 +1122,10 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 }
 
 <LIST_PARAGRAPH, BLOCK, VERSE_PARAGRAPH> {
+    {LineFeed}? "ifdef::" {AttributeName} "[" [^\]]+ "]" {Whitespace}* {LineFeed} |
+    {LineFeed}? "ifdef::" {AttributeName} "[]" {Whitespace}* {LineFeed} ~ "endif::" {NoLineFeed}* {LineFeed} |
+    {LineFeed}? "ifndef::" {AttributeName} "[" [^\]]+ "]" {Whitespace}* {LineFeed} |
+    {LineFeed}? "ifndef::" {AttributeName} "[]" {Whitespace}* {LineFeed} ~ "endif::" {NoLineFeed}* {LineFeed} |
     {LineFeed}? {Whitespace}* [*]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
     {LineFeed}? {Whitespace}* [-]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
     {LineFeed}? {Whitespace}* ([1-9][0-9]*)? [.]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
@@ -1134,26 +1138,20 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     {LineFeed}? {Properties} {Whitespace}* {LineFeed} |
     {LineFeed}* "+" {Whitespace}* {LineFeed}
     {
-        if ( trimAll(yytext()).startsWith("ifdef::")
-                || trimAll(yytext()).startsWith("ifndef::")
-                || trimAll(yytext()).startsWith("endif::") ) {
-                appendText(yytext());
-        } else {
-              // Check for those stupid cases when the first newline should be skipped
-                if ( zzLexicalState != LIST_PARAGRAPH || getText().contains("\n")) {
-                    if ( yytext().startsWith("\n")) {
-                        yypushback(yytext().length()-1);
-                    } else {
-                        yypushback(yytext().length());
-                    }
-                } else {
-                    yypushback(yytext().length());
-                }
-                appendFormatted();
-                closeBlockElement();
-                yybegin(NEWLINE);
-                }
+      // Check for those stupid cases when the first newline should be skipped
+        if ( zzLexicalState != LIST_PARAGRAPH || getText().contains("\n")) {
+            if ( yytext().startsWith("\n")) {
+                yypushback(yytext().length()-1);
+            } else {
+                yypushback(yytext().length());
             }
+        } else {
+            yypushback(yytext().length());
+        }
+        appendFormatted();
+        closeBlockElement();
+        yybegin(NEWLINE);
+        }
 }
 
 <BLOCK> {
