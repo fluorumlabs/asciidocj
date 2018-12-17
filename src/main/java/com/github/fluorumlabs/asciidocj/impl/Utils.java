@@ -15,6 +15,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by Artem Godin on 12/4/2018.
@@ -239,6 +242,27 @@ public class Utils {
             if ( child.tagName().equals(AsciidocRenderer.TITLE.tag()) ) return child;
         }
         return null;
+    }
+
+    public static String replaceFunctional(Pattern pattern, String input, Function<String[], String> replacement) {
+        Matcher matcher = pattern.matcher(input);
+        StringBuffer sb = new StringBuffer();
+
+        while(matcher.find()) {
+            int groupCount = matcher.groupCount() + 1;
+            String[] groups = new String[groupCount];
+
+            for(int i = 0; i < groupCount; ++i) {
+                groups[i] = matcher.group(i);
+            }
+
+            String result = (String)replacement.apply(groups);
+            if (result != null) {
+                matcher.appendReplacement(sb, Matcher.quoteReplacement(result));
+            }
+        }
+
+        return matcher.appendTail(sb).toString();
     }
 
 }

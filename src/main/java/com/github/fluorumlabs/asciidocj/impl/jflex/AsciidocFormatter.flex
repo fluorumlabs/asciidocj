@@ -33,211 +33,216 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 
 %{
     public AsciidocFormatter() {
-                }
-
-        private enum Pass {
-            SPECIAL_CHARACTERS, QUOTES, ATTRIBUTES, REPLACEMENTS, MACROS, POST_REPLACEMENTS, CALLOUTS, ESCAPES;
-        }
-
-        private Set<Pass> disabled = new HashSet<AsciidocFormatter.Pass>();
-
-
-                /**
-                 * Parse the Asciidoc paragraph/block and return a resulting Document
-                 *
-                 * @param text       Asciidoc
-                 * @param properties Properties
-                 * @param attributes Attributes
-                 * @return JSoup Document
-                 * @throws ParserException if there was an unrecoverable error
-                 */
-                public Document parse(String text, JSONObject properties, JSONObject attributes) throws ParserException {
-                    this.properties = properties;
-                    this.attributes = attributes;
-                    document = Document.createShell("");
-                    document.outputSettings().prettyPrint(false);
-                    currentElement = document.body();
-                    textBuilder.setLength(0);
-                    disabled.clear();
-                    disabled.add(Pass.CALLOUTS);
-
-                    if ( attributes.has(":listing") ) {
-                        disabled.remove(Pass.CALLOUTS);
-                        disabled.add(Pass.QUOTES);
-                        disabled.add(Pass.ATTRIBUTES);
-                        disabled.add(Pass.REPLACEMENTS);
-                        disabled.add(Pass.MACROS);
-                        disabled.add(Pass.POST_REPLACEMENTS);
-                        disabled.add(Pass.ESCAPES);
                     }
 
-                    for (String sub : attributes.optString(":subs").split(",")) {
-                        boolean add = true;
-                        if ( sub.contains("-") ) {
-                            add = false;
+            private enum Pass {
+                SPECIAL_CHARACTERS, QUOTES, ATTRIBUTES, REPLACEMENTS, MACROS, POST_REPLACEMENTS, CALLOUTS, ESCAPES;
+            }
+
+            private Set<Pass> disabled = new HashSet<AsciidocFormatter.Pass>();
+
+
+                    /**
+                     * Parse the Asciidoc paragraph/block and return a resulting Document
+                     *
+                     * @param text       Asciidoc
+                     * @param properties Properties
+                     * @param attributes Attributes
+                     * @return JSoup Document
+                     * @throws ParserException if there was an unrecoverable error
+                     */
+                    public Document parse(String text, JSONObject properties, JSONObject attributes) throws ParserException {
+                        this.properties = properties;
+                        this.attributes = attributes;
+                        document = Document.createShell("");
+                        document.outputSettings().prettyPrint(false);
+                        currentElement = document.body();
+                        textBuilder.setLength(0);
+                        disabled.clear();
+                        disabled.add(Pass.CALLOUTS);
+
+                        if ( attributes.has(":listing") ) {
+                            disabled.remove(Pass.CALLOUTS);
+                            disabled.add(Pass.QUOTES);
+                            disabled.add(Pass.ATTRIBUTES);
+                            disabled.add(Pass.REPLACEMENTS);
+                            disabled.add(Pass.MACROS);
+                            disabled.add(Pass.POST_REPLACEMENTS);
+                            disabled.add(Pass.ESCAPES);
                         }
-                        switch ( sub.toLowerCase().trim().replaceAll("[+-]","") ) {
-                            case "none":
-                                disabled.add(Pass.SPECIAL_CHARACTERS);
-                                disabled.add(Pass.QUOTES);
-                                disabled.add(Pass.ATTRIBUTES);
-                                disabled.add(Pass.REPLACEMENTS);
-                                disabled.add(Pass.MACROS);
-                                disabled.add(Pass.POST_REPLACEMENTS);
-                                disabled.add(Pass.CALLOUTS);
-                                disabled.add(Pass.ESCAPES);
-                                break;
-                            case "normal":
-                                disabled.remove(Pass.SPECIAL_CHARACTERS);
-                                disabled.remove(Pass.QUOTES);
-                                disabled.remove(Pass.ATTRIBUTES);
-                                disabled.remove(Pass.REPLACEMENTS);
-                                disabled.remove(Pass.MACROS);
-                                disabled.remove(Pass.POST_REPLACEMENTS);
-                                disabled.add(Pass.CALLOUTS);
-                                disabled.remove(Pass.ESCAPES);
-                                break;
-                            case "verbatim":
-                                if ( add ) {
-                                    disabled.remove(Pass.SPECIAL_CHARACTERS);
-                                    disabled.remove(Pass.CALLOUTS);
-                                } else {
+
+                        for (String sub : attributes.optString(":subs").split(",")) {
+                            boolean add = true;
+                            if ( sub.contains("-") ) {
+                                add = false;
+                            }
+                            switch ( sub.toLowerCase().trim().replaceAll("[+-]","") ) {
+                                case "none":
                                     disabled.add(Pass.SPECIAL_CHARACTERS);
-                                    disabled.add(Pass.CALLOUTS);
-                                }
-                                break;
-                            case "callouts":
-                                if ( add ) {
-                                    disabled.remove(Pass.CALLOUTS);
-                                } else {
-                                    disabled.add(Pass.CALLOUTS);
-                                }
-                                break;
-                            case "quotes":
-                                if ( add ) {
-                                    disabled.remove(Pass.QUOTES);
-                                } else {
                                     disabled.add(Pass.QUOTES);
-                                }
-                                break;
-                            case "attributes":
-                                if ( add ) {
-                                    disabled.remove(Pass.ATTRIBUTES);
-                                } else {
                                     disabled.add(Pass.ATTRIBUTES);
-                                }
-                                break;
-                            case "replacements":
-                                if ( add ) {
-                                    disabled.remove(Pass.REPLACEMENTS);
-                                } else {
                                     disabled.add(Pass.REPLACEMENTS);
-                                }
-                                break;
-                            case "macros":
-                                if ( add ) {
-                                    disabled.remove(Pass.MACROS);
-                                } else {
                                     disabled.add(Pass.MACROS);
-                                }
-                                break;
-                            case "post_replacements":
-                                if ( add ) {
-                                    disabled.remove(Pass.POST_REPLACEMENTS);
-                                } else {
                                     disabled.add(Pass.POST_REPLACEMENTS);
-                                }
-                                break;
+                                    disabled.add(Pass.CALLOUTS);
+                                    disabled.add(Pass.ESCAPES);
+                                    break;
+                                case "normal":
+                                    disabled.remove(Pass.SPECIAL_CHARACTERS);
+                                    disabled.remove(Pass.QUOTES);
+                                    disabled.remove(Pass.ATTRIBUTES);
+                                    disabled.remove(Pass.REPLACEMENTS);
+                                    disabled.remove(Pass.MACROS);
+                                    disabled.remove(Pass.POST_REPLACEMENTS);
+                                    disabled.add(Pass.CALLOUTS);
+                                    disabled.remove(Pass.ESCAPES);
+                                    break;
+                                case "verbatim":
+                                    if ( add ) {
+                                        disabled.remove(Pass.SPECIAL_CHARACTERS);
+                                        disabled.remove(Pass.CALLOUTS);
+                                    } else {
+                                        disabled.add(Pass.SPECIAL_CHARACTERS);
+                                        disabled.add(Pass.CALLOUTS);
+                                    }
+                                    break;
+                                case "callouts":
+                                    if ( add ) {
+                                        disabled.remove(Pass.CALLOUTS);
+                                    } else {
+                                        disabled.add(Pass.CALLOUTS);
+                                    }
+                                    break;
+                                case "quotes":
+                                    if ( add ) {
+                                        disabled.remove(Pass.QUOTES);
+                                    } else {
+                                        disabled.add(Pass.QUOTES);
+                                    }
+                                    break;
+                                case "attributes":
+                                    if ( add ) {
+                                        disabled.remove(Pass.ATTRIBUTES);
+                                    } else {
+                                        disabled.add(Pass.ATTRIBUTES);
+                                    }
+                                    break;
+                                case "replacements":
+                                    if ( add ) {
+                                        disabled.remove(Pass.REPLACEMENTS);
+                                    } else {
+                                        disabled.add(Pass.REPLACEMENTS);
+                                    }
+                                    break;
+                                case "macros":
+                                    if ( add ) {
+                                        disabled.remove(Pass.MACROS);
+                                    } else {
+                                        disabled.add(Pass.MACROS);
+                                    }
+                                    break;
+                                case "post_replacements":
+                                    if ( add ) {
+                                        disabled.remove(Pass.POST_REPLACEMENTS);
+                                    } else {
+                                        disabled.add(Pass.POST_REPLACEMENTS);
+                                    }
+                                    break;
+                            }
+                        }
+
+                        String passString = attributes.optString(":pass","");
+                        if ( !passString.isEmpty() ) {
+                            if ( !passString.contains("c") ) disabled.add(Pass.SPECIAL_CHARACTERS);
+                            else disabled.remove(Pass.SPECIAL_CHARACTERS);
+
+                            if ( !passString.contains("q") ) disabled.add(Pass.QUOTES);
+                            else disabled.remove(Pass.QUOTES);
+
+                            if ( !passString.contains("a") ) disabled.add(Pass.ATTRIBUTES);
+                            else disabled.remove(Pass.ATTRIBUTES);
+
+                            if ( !passString.contains("r") ) disabled.add(Pass.REPLACEMENTS);
+                            else disabled.remove(Pass.REPLACEMENTS);
+
+                            if ( !passString.contains("m") ) disabled.add(Pass.MACROS);
+                            else disabled.remove(Pass.MACROS);
+
+                            if ( !passString.contains("p") ) disabled.add(Pass.POST_REPLACEMENTS);
+                            else disabled.remove(Pass.POST_REPLACEMENTS);
+                        }
+
+                        try {
+                            yyreset(getReader(text, false));
+                            parseInput();
+                            appendTextNode(); // If needed
+                            return document;
+                        } catch (IOException e) {
+                            throw new ParserException(e);
                         }
                     }
 
-                    String passString = attributes.optString(":pass","");
-                    if ( !passString.isEmpty() ) {
-                        if ( !passString.contains("c") ) disabled.add(Pass.SPECIAL_CHARACTERS);
-                        else disabled.remove(Pass.SPECIAL_CHARACTERS);
+                    private AsciidocFormatter formatter;
 
-                        if ( !passString.contains("q") ) disabled.add(Pass.QUOTES);
-                        else disabled.remove(Pass.QUOTES);
-
-                        if ( !passString.contains("a") ) disabled.add(Pass.ATTRIBUTES);
-                        else disabled.remove(Pass.ATTRIBUTES);
-
-                        if ( !passString.contains("r") ) disabled.add(Pass.REPLACEMENTS);
-                        else disabled.remove(Pass.REPLACEMENTS);
-
-                        if ( !passString.contains("m") ) disabled.add(Pass.MACROS);
-                        else disabled.remove(Pass.MACROS);
-
-                        if ( !passString.contains("p") ) disabled.add(Pass.POST_REPLACEMENTS);
-                        else disabled.remove(Pass.POST_REPLACEMENTS);
+                    private Document getFormatted(String text) throws ParserException {
+                        if (formatter == null) formatter = new AsciidocFormatter();
+                        return formatter.parse(text, properties, attributes);
                     }
 
-                    try {
-                        yyreset(getReader(text, false));
-                        parseInput();
-                        appendTextNode(); // If needed
-                        return document;
-                    } catch (IOException e) {
-                        throw new ParserException(e);
+                    private Document getFormatted(String text, JSONObject passAttributes) throws ParserException {
+                        if (formatter == null) formatter = new AsciidocFormatter();
+                        return formatter.parse(text, properties, passAttributes);
                     }
-                }
 
-                private AsciidocFormatter formatter;
-
-                private Document getFormatted(String text) throws ParserException {
-                    if (formatter == null) formatter = new AsciidocFormatter();
-                    return formatter.parse(text, properties, attributes);
-                }
-
-                private Document getFormatted(String text, JSONObject passAttributes) throws ParserException {
-                    if (formatter == null) formatter = new AsciidocFormatter();
-                    return formatter.parse(text, properties, passAttributes);
-                }
-
-                private String getFormatted(String text, String passMode) throws ParserException {
-                    if (formatter == null) formatter = new AsciidocFormatter();
-                    JSONObject passAttributes = new JSONObject(attributes);
-                    passAttributes.put(":pass",passMode);
-                    return formatter.parse(text, properties, passAttributes).body().html();
-                }
-
-                private void appendFormatted(String text) throws ParserException {
-                    if (formatter == null) formatter = new AsciidocFormatter();
-                    appendDocument(formatter.parse(text, properties, attributes));
-                }
-
-                private static final String QUOTED_EXTRACT_REGEXP = "^[\1]([\\s\\S]*?[^\\s\1])[\1]([^\1\\w]|$)";
-
-                private String extractQuoted(String x, char marker) {
-                    String pattern = QUOTED_EXTRACT_REGEXP.replace('\1', marker);
-                    Matcher matcher = Pattern.compile(pattern).matcher(x);
-                    if (!matcher.find()) {
-                        return "";
-                    } else {
-                        return matcher.group(1);
+                    private String getFormatted(String text, String passMode) throws ParserException {
+                        if (formatter == null) formatter = new AsciidocFormatter();
+                        JSONObject passAttributes = new JSONObject(attributes);
+                        passAttributes.put(":pass",passMode);
+                        return formatter.parse(text, properties, passAttributes).body().html();
                     }
-                }
 
-                private static final String QUOTED_UNCONSTRAINED_CODE_EXTRACT_REGEXP = "^``([\\s\\S]+?)``(`\"|`'|[^`]|$)";
-
-                private String extractUnconstrainedCode(String x) {
-                    Matcher matcher = Pattern.compile(QUOTED_UNCONSTRAINED_CODE_EXTRACT_REGEXP).matcher(x);
-                    if (!matcher.find()) {
-                        return "";
-                    } else {
-                        return matcher.group(1);
+                    private void appendFormatted(String text) throws ParserException {
+                        if (formatter == null) formatter = new AsciidocFormatter();
+                        appendDocument(formatter.parse(text, properties, attributes));
                     }
-                }
 
-                private boolean fallback(Pass passMode) throws ParserException {
-                    if ( disabled.contains(passMode) ) {
-                        appendText(yytext().substring(0,1));
-                        yypushback(yytext().length()-1);
-                        return true;
-                    } else {
-                        return false;
+                    private static final String QUOTED_EXTRACT_REGEXP = "^[\1]([\\s\\S]*?[^\\s])[\1]([^\1\\w]|$)";
+                    private static final Pattern PLUS_ESCAPE_PATTERN = Pattern.compile("\\+\\+\\+(.+?)\\+\\+\\+");
+
+                    private String extractQuoted(String x, char marker) {
+                        String escaped = replaceFunctional(PLUS_ESCAPE_PATTERN,x,strings -> strings[0].replace(marker,'\2'));
+
+                        String pattern = QUOTED_EXTRACT_REGEXP.replace('\1', marker);
+                        Matcher matcher = Pattern.compile(pattern).matcher(escaped);
+                        if (!matcher.find()) {
+                            return "";
+                        } else {
+                            return x.substring(matcher.start(1), matcher.end(1));
+                        }
                     }
-                }
+
+                    private static final String QUOTED_UNCONSTRAINED_CODE_EXTRACT_REGEXP = "^``([\\s\\S]+?)``(`\"|`'|[^`]|$)";
+
+                    private String extractUnconstrainedCode(String x) {
+                        String escaped = replaceFunctional(PLUS_ESCAPE_PATTERN,x,strings -> strings[0].replace('`','\2'));
+
+                        Matcher matcher = Pattern.compile(QUOTED_UNCONSTRAINED_CODE_EXTRACT_REGEXP).matcher(escaped);
+                        if (!matcher.find()) {
+                            return "";
+                        } else {
+                            return x.substring(matcher.start(1), matcher.end(1));
+                        }
+                    }
+
+                    private boolean fallback(Pass passMode) throws ParserException {
+                        if ( disabled.contains(passMode) ) {
+                            appendText(yytext().substring(0,1));
+                            yypushback(yytext().length()-1);
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    }
 
 %}
 

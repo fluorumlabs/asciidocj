@@ -1138,19 +1138,23 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     {LineFeed}? {Properties} {Whitespace}* {LineFeed} |
     {LineFeed}* "+" {Whitespace}* {LineFeed}
     {
-      // Check for those stupid cases when the first newline should be skipped
-        if ( zzLexicalState != LIST_PARAGRAPH || getText().contains("\n")) {
-            if ( yytext().startsWith("\n")) {
-                yypushback(yytext().length()-1);
+        if ( yytext().startsWith("if") && !yytext().contains("\n+\n")) {
+            appendText(yytext());
+        } else {
+          // Check for those stupid cases when the first newline should be skipped
+            if ( zzLexicalState != LIST_PARAGRAPH || getText().contains("\n")) {
+                if ( yytext().startsWith("\n")) {
+                    yypushback(yytext().length()-1);
+                } else {
+                    yypushback(yytext().length());
+                }
             } else {
                 yypushback(yytext().length());
             }
-        } else {
-            yypushback(yytext().length());
-        }
-        appendFormatted();
-        closeBlockElement();
-        yybegin(NEWLINE);
+            appendFormatted();
+            closeBlockElement();
+            yybegin(NEWLINE);
+            }
         }
 }
 
