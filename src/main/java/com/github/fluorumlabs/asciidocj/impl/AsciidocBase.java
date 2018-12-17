@@ -43,6 +43,7 @@ public abstract class AsciidocBase {
             }
             if (properties.has("id")) {
                 element.attr("id", properties.getString("id"));
+                if ( properties.has("title:html") ) attributes.put("anchor:"+properties.getString("id"), properties.get("title:html"));
                 if ( properties.has("reftext") ) attributes.put("anchor:"+properties.getString("id"), properties.get("reftext"));
             }
         }
