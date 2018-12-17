@@ -46,10 +46,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 %}
 
 TCDuplicate                 = [1-9][0-9]* "*"
-TCSpanColumn                = [1-9][0-9]* "+"
-TCSpanRow                   = [1-9][0-9]* "."
 TCAlign                     = "."? [\^<>]
-TCFormat                    = [aehlmdsv]
 
 %%
 

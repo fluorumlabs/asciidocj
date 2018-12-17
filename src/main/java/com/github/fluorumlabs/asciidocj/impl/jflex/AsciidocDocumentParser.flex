@@ -109,7 +109,14 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
         if ( currentProperties.has("options") ) {
             shadowProperties.put("options", currentProperties.get("options"));
         }
-        appendDocument(formatter.parse(trimAll(getTextAndClear()), shadowProperties, attributes));
+        String text = getTextAndClear();
+        if (!attributes.has(":listing")) {
+            text = trimAll(text);
+        }
+        appendDocument(formatter.parse(text, shadowProperties, attributes));
+        attributes.remove(":pass");
+        attributes.remove(":subs");
+        attributes.remove(":listing");
     }
 
     /**
@@ -145,6 +152,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 
     private JSONObject tableProperties;
     private int tableCellCounter;
+    private Element lastListItem = null;
 %}
 
 LineFeed                    = \R | \0
@@ -194,7 +202,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 %%
 
 <YYINITIAL> {
-    "---" {LineFeed} [^]* {LineFeed} "---" {LineFeed} {LineFeed}
+    "---" {LineFeed} [^]* {LineFeed} "---" {LineFeed}
     {
                 // Skip front matter
             }
@@ -211,23 +219,35 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 }
 
 <NEWLINE> {
-    {Whitespace}* {LineFeed}
-    {
-            }
+    {LineFeed}* "+" {Whitespace}* {LineFeed} {
+        appendFormatted();
+        if ( lastListItem != null ) {
+            int level = skipRight(yytext(), " \t\n").length()-1;
+            Element targetListItem = lastListItem;
 
-    {LineFeed}* "+" {LineFeed} {
-        if ( !currentElement.tagName().equals(AsciidocRenderer.LIST_ITEM.tag())) {
-            closeToElement(AsciidocRenderer.LIST_ITEM);
-        }
-        if ( currentElement.tagName().equals(AsciidocRenderer.LIST_ITEM.tag()) ) {
-            int level = Integer.parseInt(currentElement.attr("level")) - (yytext().length()-2);
-            Element targetListItem = currentElement;
-            while (targetListItem != null &&
-                (!targetListItem.tagName().equals(AsciidocRenderer.LIST_ITEM.tag()) || !targetListItem.attr("level").equals(Integer.toString(level)))) {
-                targetListItem = targetListItem.parent();
+            while (level >= 0 && targetListItem != null) {
+                if ( targetListItem.tagName().equals(AsciidocRenderer.LIST_ITEM.tag())
+                     || targetListItem.tagName().equals(AsciidocRenderer.DD.tag()) ) {
+                    level--;
+                }
+                if ( level >= 0 ) {
+                    targetListItem = targetListItem.parent();
+                }
             }
-            if ( targetListItem != null ) currentElement = targetListItem;
+            if ( targetListItem != null && isTerminal(targetListItem)) {
+                currentElement = targetListItem;
+                lastListItem = targetListItem;
+            } else {
+                // If level is too deep -- ignore it and continue current item
+                currentElement = lastListItem;
+            }
         }
+      }
+}
+
+<NEWLINE> {
+    {Whitespace}* {LineFeed} {
+
       }
 
     ":!" {AttributeName} ":" {Whitespace}* {LineFeed} |
@@ -258,17 +278,20 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 attributes.remove(parts[1]+"!");
             }
 
-    "[[" {NoLineFeed}+ "]]" {LineFeed}
+    "[[" {NoLineFeed}+ "]]" {Whitespace}* {LineFeed}
     {
                 String[] id = extractBetween(yytext(), "[[", "]]").split(",",2);
                 if ( id.length>0 ) properties.put("id", id[0]);
                 if ( id.length>1 ) properties.put("reftext", getFormatted(id[1]).body().html());
             }
 
-    "[" {NoLineFeed}+ "'" {NoLineFeed}+ "']" {LineFeed} |
-    "[" {NoLineFeed}+ "]" {LineFeed}
+    "[" {NoLineFeed}+ "'" {NoLineFeed}+ "']" {Whitespace}* {LineFeed} |
+    "[" {NoLineFeed}+ "]" {Whitespace}* {LineFeed}
     {
                 PropertiesParser.parse(strip(yytext(), 1, 2), properties, true);
+                if ( properties.has("subs") ) {
+                    attributes.put(":subs",properties.get("subs"));
+                }
                 promoteArgumentsToClasses();
             }
 
@@ -309,17 +332,19 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 yybegin(TABLE_BLOCK);
             }
 
-    [/]{4,128} {LineFeed}
+    [/]{4,128} {Whitespace}* {LineFeed}
     {
                 yybegin(COMMENT_BLOCK);
             }
 
     "//" .* {LineFeed}
     {
+        lastListItem = null;
+        lastBlockParent = null;
             }
 
 
-    [*]{4,128} {LineFeed}
+    [*]{4,128} {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
                 String caption = properties.optString("caption","\0");
@@ -334,7 +359,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 yybegin(SIDEBAR_BLOCK);
             }
 
-    [=]{4,128} {LineFeed}
+    [=]{4,128} {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
                 String caption = properties.optString("caption","\0");
@@ -370,13 +395,13 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 yybegin(EXAMPLE_BLOCK);
             }
 
-    [.]{4,128} {LineFeed}
+    [.]{4,128} {Whitespace}* {LineFeed}
     {
                 openElement(AsciidocRenderer.LITERAL_BLOCK);
                 yybegin(LITERAL_BLOCK);
             }
 
-    "--" {LineFeed}
+    "--" {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
                 String caption = properties.optString("caption","\0");
@@ -400,13 +425,14 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 }
 
                 if ( isListing ) {
+                    attributes.put(":listing",true);
                     yybegin(OPEN_LISTING_BLOCK);
                 } else {
                     yybegin(OPEN_BLOCK);
                 }
             }
 
-    [-]{4,128} {LineFeed}
+    [-]{4,128} {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
                 String caption = properties.optString("caption","\0");
@@ -419,10 +445,11 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     closeElement(AsciidocRenderer.TITLE);
                 }
 
+                attributes.put(":listing",true);
                 yybegin(LISTING_BLOCK);
             }
 
-    [_]{4,128} {LineFeed}
+    [_]{4,128} {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
                 String caption = properties.optString("caption","\0");
@@ -452,7 +479,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 }
             }
 
-    "\"\"" {LineFeed}
+    "\"\"" {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
                 String caption = properties.optString("caption","\0");
@@ -498,7 +525,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
         closeElement(AsciidocRenderer.QUOTE_BLOCK);
     }
 
-    [`]{3,128} {LineFeed}
+    [`]{3,128} {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
                 String caption = properties.optString("caption","\0");
@@ -511,10 +538,11 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     closeElement(AsciidocRenderer.TITLE);
                 }
 
+                attributes.put(":listing",true);
                 yybegin(LISTING_FENCE_BLOCK);
             }
 
-    [+]{4,128} {LineFeed}
+    [+]{4,128} {Whitespace}* {LineFeed}
     {
                 yybegin(PASSTHROUGH_BLOCK);
             }
@@ -615,6 +643,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     }
                     yybegin(SKIP);
                 }
+
+                lastBlockParent = currentElement;
             }
 
     /* Lists */
@@ -634,6 +664,13 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 }
 
                 int level = 1;
+                if ( !isTerminal(lastListItem) ) {
+                    closeBlockElement();
+                    lastListItem = null;
+                }
+                if ( lastListItem != null ) {
+                    currentElement = lastListItem;
+                }
                 closeToElement(AsciidocRenderer.UL, level);
                 JSONObject props = properties;
                 if (currentElement == null
@@ -648,6 +685,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 }
                 properties = props;
                 openElement(AsciidocRenderer.LIST_ITEM).attr("level", Integer.toString(level));
+                lastListItem = currentElement;
                 openElement(AsciidocRenderer.P);
                 openElement(AsciidocRenderer.LINK).attr("id", id);
                 closeElement(AsciidocRenderer.LINK);
@@ -666,9 +704,13 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     {
                 String titleHtml = properties.optString("title:html");
 
-                String text = trim(stripTail(yytext(), 3));
+                String text = trimAll(stripTail(yytext(), 3));
                 int level = text.length();
-                closeToElement(AsciidocRenderer.UL, level);
+                if ( !isTerminal(lastListItem) ) {
+                    closeBlockElement();
+                    lastListItem = null;
+                }
+                closeToElement(lastListItem, AsciidocRenderer.UL, level);
                 JSONObject props = properties;
                 if (currentElement == null
                         || !currentElement.tagName().equals(AsciidocRenderer.UL.tag())
@@ -682,6 +724,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 }
                 properties = props;
                 openElement(AsciidocRenderer.LIST_ITEM).attr("level", Integer.toString(level));
+                lastListItem = currentElement;
                 openElement(AsciidocRenderer.P);
                 if (yytext().endsWith("[ ]")) {
                     appendText("\u274f");
@@ -696,9 +739,13 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     {
                 String titleHtml = properties.optString("title:html");
 
-                String text = trim(yytext());
+                String text = trimAll(yytext());
                 int level = text.length();
-                closeToElement(AsciidocRenderer.UL, level);
+                if ( !isTerminal(lastListItem) ) {
+                    closeBlockElement();
+                    lastListItem = null;
+                }
+                closeToElement(lastListItem, AsciidocRenderer.UL, level);
                 JSONObject props = properties;
                 if (currentElement == null
                         || !currentElement.tagName().equals(AsciidocRenderer.UL.tag())
@@ -711,6 +758,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 }
                 properties = props;
                 openElement(AsciidocRenderer.LIST_ITEM).attr("level", Integer.toString(level));
+                lastListItem = currentElement;
                 openElement(AsciidocRenderer.P);
                 yybegin(LIST_PARAGRAPH);
             }
@@ -719,9 +767,13 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     {
                 String titleHtml = properties.optString("title:html");
 
-                String text = trim(yytext());
+                String text = trimAll(yytext());
                 int level = text.replaceAll("[^.]", "").length();
-                closeToElement(AsciidocRenderer.OL, level);
+                if ( !isTerminal(lastListItem) ) {
+                    closeBlockElement();
+                    lastListItem = null;
+                }
+                closeToElement(lastListItem, AsciidocRenderer.OL, level);
                 JSONObject props = properties;
                 if (currentElement == null
                         || !currentElement.tagName().equals(AsciidocRenderer.OL.tag())
@@ -734,6 +786,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 }
                 properties = props;
                 openElement(AsciidocRenderer.LIST_ITEM).attr("level", Integer.toString(level));
+                lastListItem = currentElement;
                 openElement(AsciidocRenderer.P);
                 yybegin(LIST_PARAGRAPH);
             }
@@ -745,8 +798,12 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
                 String text = trimAll(yytext());
                 String term = extractBeforeStrict(text, "::");
-                int level = text.length() - text.indexOf(':') - 1;
-                closeToElement(AsciidocRenderer.DL, level);
+                int level = text.length() - term.length() - 1;
+                if ( !isTerminal(lastListItem) ) {
+                    closeBlockElement();
+                    lastListItem = null;
+                }
+                closeToElement(lastListItem, AsciidocRenderer.DL, level);
                 JSONObject props = properties;
                 if (currentElement == null
                         || !currentElement.tagName().equals(AsciidocRenderer.DL.tag())
@@ -761,17 +818,21 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 openElement(AsciidocRenderer.DT).attr("level", Integer.toString(level));
                 appendFormatted(term);
                 closeElement(AsciidocRenderer.DT);
-                openElement(AsciidocRenderer.DD);
+                openElement(AsciidocRenderer.DD).attr("level", Integer.toString(level));
+                lastListItem = currentElement;
                 openElement(AsciidocRenderer.P);
                 yybegin(LIST_PARAGRAPH);
-
             }
 
     "<" [1-9][0-9]* ">" {Whitespace}
     {
                 String titleHtml = properties.optString("title:html");
 
-                closeToElement(AsciidocRenderer.COL);
+                if ( !isTerminal(lastListItem) ) {
+                    closeBlockElement();
+                    lastListItem = null;
+                }
+                closeToElement(lastListItem, AsciidocRenderer.COL);
                 JSONObject props = properties;
                 if (currentElement == null || !currentElement.tagName().equals(AsciidocRenderer.COL.tag())) {
                     openElement(AsciidocRenderer.COL);
@@ -782,25 +843,58 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 }
                 properties = props;
                 openElement(AsciidocRenderer.LIST_ITEM);
+                lastListItem = currentElement;
                 openElement(AsciidocRenderer.P);
                 yybegin(LIST_PARAGRAPH);
             }
 
     /* Misc formatting */
-    [']{3,128} {LineFeed}
+    [']{3,128} {Whitespace}* {LineFeed}
     {
                 appendTextNode();
                 appendElement("hr");
             }
 
-    [<]{3,128} {LineFeed}
+    [<]{3,128} {Whitespace}* {LineFeed}
     {
                 appendTextNode();
                 appendElement("div").attr("style", "page-break-after: always;");
             }
 
     /* Special blocks */
-    "image::" {NoLineFeed}+ {Properties}? {LineFeed}
+    "ifdef::" {AttributeName} "[" [^\]]+ "]" {Whitespace}* {LineFeed} |
+    "ifdef::" {AttributeName} "[]" {Whitespace}* {LineFeed} ~ "endif::" {NoLineFeed}* {LineFeed}
+    {
+          String attribute = extractAfter(extractBeforeStrict(yytext(),"["),"::");
+          String inlineValue = extractAfter(extractBeforeStrict(yytext(),"]"),"[");
+          if ( attributes.has(attribute) ) {
+              appendTextNode();
+              if ( inlineValue.isEmpty() ) {
+                  String outlineValue = extractBetween(yytext(), "[]", "endif::");
+                  appendSubdocument(outlineValue);
+              } else {
+                  appendSubdocument(inlineValue);
+              }
+          }
+      }
+
+    "ifndef::" {AttributeName} "[" [^\]]+ "]" {Whitespace}* {LineFeed} |
+    "ifndef::" {AttributeName} "[]" {Whitespace}* {LineFeed} ~ "endif::" {NoLineFeed}* {LineFeed}
+    {
+          String attribute = extractAfter(extractBeforeStrict(yytext(),"["),"::");
+          String inlineValue = extractAfter(extractBeforeStrict(yytext(),"]"),"[");
+          if ( attributes.has(attribute+"!") || !attributes.has(attribute) ) {
+              appendTextNode();
+              if ( inlineValue.isEmpty() ) {
+                  String outlineValue = extractBetween(yytext(), "[]", "endif::");
+                  appendSubdocument(outlineValue);
+              } else {
+                  appendSubdocument(inlineValue);
+              }
+          }
+      }
+
+    "image::" {NoLineFeed}+ {Properties}? {Whitespace}* {LineFeed}
     {
                 String imgUrl = extractBetween(yytext(), "image::", "[");
 
@@ -813,7 +907,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 PropertiesParser.parse(extractBetween(yytext(), "[", "]"), properties, false);
 
                 String alt = properties.optString("alt", getArgument(0));
-                if (alt.isEmpty()) alt = extractAfterStrict(extractBeforeStrict(imgUrl, "."), "/");
+                if (alt.isEmpty()) alt = extractAfterStrict(extractBeforeStrict(imgUrl, "."), "/").replaceAll("[\\-_]"," ");
                 String titleHtml = properties.optString("title:html");
                 String title = properties.optString("title");
                 String caption = properties.optString("caption","\0");
@@ -833,8 +927,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 if (properties.has("height")) {
                     imageProperties.put("height", properties.get("height"));
                 }
-                if (properties.has("opts")) {
-                    imageProperties.put("opts", properties.get("opts"));
+                if (properties.has("options")) {
+                    imageProperties.put("options", properties.get("options"));
                 }
 
                 openElement(AsciidocRenderer.IMAGE_BLOCK);
@@ -854,7 +948,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 closeElement(AsciidocRenderer.IMAGE_BLOCK);
             }
 
-    "video::" {NoLineFeed}+ {Properties}? {LineFeed}
+    "video::" {NoLineFeed}+ {Properties}? {Whitespace}* {LineFeed}
     {
                 String videoUrl = extractBetween(yytext(), "video::", "[");
 
@@ -881,7 +975,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 closeElement(AsciidocRenderer.VIDEO_BLOCK);
             }
 
-    "audio::" {NoLineFeed}+ {Properties}? {LineFeed}
+    "audio::" {NoLineFeed}+ {Properties}? {Whitespace}* {LineFeed}
     {
                 String audioUrl = extractBetween(yytext(), "audio::", "[");
 
@@ -907,7 +1001,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 closeElement(AsciidocRenderer.AUDIO_BLOCK);
             }
 
-    "toc::" {Properties}? {LineFeed}
+    "toc::" {Properties}? {Whitespace}* {LineFeed}
     {
         openElement(AsciidocRenderer.TOC);
         closeElement(AsciidocRenderer.TOC);
@@ -978,6 +1072,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                         closeElement(AsciidocRenderer.TITLE);
                     }
 
+                    attributes.put(":listing",true);
                     yybegin(LISTING_PARAGRAPH);
                 } else if (getArgument(0).equals("quote") || getArgument(0).equals("verse")) {
                     yypushback(1);
@@ -1026,18 +1121,33 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     {LineFeed}? {Whitespace}* [-]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
     {LineFeed}? {Whitespace}* ([1-9][0-9]*)? [.]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
     {LineFeed}? {Whitespace}* {NoLineFeed}+ [:]{2,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
-    {LineFeed}? {Whitespace}* {NoLineFeed}+ [:]{2,5} {LineFeed} |
+    {LineFeed}? {Whitespace}* {NoLineFeed}+ [:]{2,5} {Whitespace}* {LineFeed} |
     {LineFeed}? "<" [1-9][0-9]* ">" {Whitespace} {NoLineFeed}+ {LineFeed} |
     {LineFeed}? ":" {AttributeName} ":" |
     {LineFeed}? ":!" {AttributeName} ":" |
     {LineFeed}? ":" {AttributeName} "!:" |
-    {LineFeed}? {Properties} {LineFeed} |
-    {LineFeed}* "+" {LineFeed}
-        {
-                yypushback(yytext().length());
+    {LineFeed}? {Properties} {Whitespace}* {LineFeed} |
+    {LineFeed}* "+" {Whitespace}* {LineFeed}
+    {
+        if ( trimAll(yytext()).startsWith("ifdef::")
+                || trimAll(yytext()).startsWith("ifndef::")
+                || trimAll(yytext()).startsWith("endif::") ) {
+                appendText(yytext());
+        } else {
+              // Check for those stupid cases when the first newline should be skipped
+                if ( zzLexicalState != LIST_PARAGRAPH || getText().contains("\n")) {
+                    if ( yytext().startsWith("\n")) {
+                        yypushback(yytext().length()-1);
+                    } else {
+                        yypushback(yytext().length());
+                    }
+                } else {
+                    yypushback(yytext().length());
+                }
                 appendFormatted();
-                currentElement = currentElement.parent();
+                closeBlockElement();
                 yybegin(NEWLINE);
+                }
             }
 }
 
@@ -1046,6 +1156,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     {
                 appendFormatted();
                 closeBlockElement();
+                //yypushback(yytext().length());
                 yybegin(NEWLINE);
             }
 
@@ -1076,6 +1187,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     currentElement = currentElement.parent();
                     block.remove();
                 }
+                yypushback(yytext().length());
                 yybegin(NEWLINE);
             }
 
@@ -1090,10 +1202,11 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
 
 <LIST_PARAGRAPH> {
-    {LineFeed}
+    {Whitespace}* {LineFeed}
     {
                 appendFormatted();
-                closeElementTop(AsciidocRenderer.UL, AsciidocRenderer.OL, AsciidocRenderer.COL);
+                closeBlockElement();
+                yypushback(yytext().length());
                 yybegin(NEWLINE);
             }
 
@@ -1137,7 +1250,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 }
 
 <LITERAL_BLOCK> {
-    {Whitespace}* {LineFeed}* [.]{4,128} {LineFeed}
+    {Whitespace}* {LineFeed}* [.]{4,128} {Whitespace}* {LineFeed}
     {
                 appendTextNode();
                 closeBlockElement();
@@ -1156,14 +1269,14 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 <LISTING_BLOCK> {
     {Whitespace}* {LineFeed}* [-]{4,128} {Whitespace}* {LineFeed}
     {
-                appendTextNode();
-                closeBlockElement();
-                yybegin(NEWLINE);
-            }
+        appendFormatted();
+        closeBlockElement();
+        yybegin(NEWLINE);
+    }
 }
 
 <QUOTE_BLOCK> {
-    {Whitespace}* {LineFeed}* [_]{4,128} {LineFeed}
+    {Whitespace}* {LineFeed}* [_]{4,128} {Whitespace}* {LineFeed}
     {
                 appendSubdocument(getTextAndClear());
                 closeBlockElement();
@@ -1177,7 +1290,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 }
 
 <VERSE_BLOCK> {
-    {Whitespace}* {LineFeed}* [_]{4,128} {LineFeed}
+    {Whitespace}* {LineFeed}* [_]{4,128} {Whitespace}* {LineFeed}
     {
                 closeBlockElement();
                 yybegin(NEWLINE);
@@ -1215,7 +1328,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 }
 
 <AIR_QUOTE_BLOCK> {
-    {Whitespace}* {LineFeed}* "\"\"" {LineFeed}
+    {Whitespace}* {LineFeed}* "\"\"" {Whitespace}* {LineFeed}
     {
                 appendSubdocument(getTextAndClear());
                 closeBlockElement();
@@ -1231,44 +1344,22 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 <LISTING_FENCE_BLOCK> {
     {Whitespace}* {LineFeed}* [`]{3,128} {Whitespace}* {LineFeed}
     {
-                appendTextNode();
-                closeBlockElement();
-                yybegin(NEWLINE);
-            }
+        appendFormatted();
+        closeBlockElement();
+        yybegin(NEWLINE);
+    }
 }
 
 <LISTING_PARAGRAPH> {
-    {Whitespace}* {LineFeed} {LineFeed}
-        {
-                appendTextNode();
-                closeBlockElement();
-                yybegin(NEWLINE);
-            }
+    {Whitespace}* {LineFeed} / {LineFeed}
+    {
+        appendFormatted();
+        closeBlockElement();
+        yybegin(NEWLINE);
+    }
 }
 
 <OPEN_LISTING_BLOCK, LISTING_BLOCK, LISTING_PARAGRAPH, LISTING_FENCE_BLOCK> {
-    "//" {Whitespace}* "<" [1-9][0-9+]* ">" |
-    "#" {Whitespace}* "<" [1-9][0-9+]* ">" |
-    ";;" {Whitespace}* "<" [1-9][0-9+]* ">"
-    {
-                // Asciidoctor 1.5.8+
-                appendText(extractBeforeStrict(yytext(), "<"));
-                // End of Asciidoctor 1.5.8+
-                openElement("b").addClass("conum").text(String.format("(%s)", extractBetween(yytext(), "<", ">")));
-                closeElement("b");
-            }
-
-    "<" [1-9][0-9+]* ">"
-    {
-                openElement("b").addClass("conum").text(String.format("(%s)", extractBetween(yytext(), "<", ">")));
-                closeElement("b");
-            }
-
-    "<!--" [1-9][0-9]* "-->"
-    {
-                openElement("b").addClass("conum").text(String.format("(%s)", extractBetween(yytext(), "<!--", "-->")));
-                closeElement("b");
-            }
 
     {Whitespace}* {LineFeed}
     {
@@ -1282,7 +1373,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 }
 
 <PASSTHROUGH_BLOCK> {
-    {Whitespace}* {LineFeed}* [+]{4,128} {LineFeed}
+    {Whitespace}* {LineFeed}* [+]{4,128} {Whitespace}* {LineFeed}
     {
                 currentElement.append(getTextAndClear());
                 yybegin(NEWLINE);
@@ -1295,7 +1386,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 }
 
 <SIDEBAR_BLOCK> {
-    {Whitespace}* {LineFeed}* [*]{4,128} {LineFeed}
+    {Whitespace}* {LineFeed}* [*]{4,128} {Whitespace}* {LineFeed}
     {
                 appendSubdocument(getTextAndClear());
                 closeBlockElement();
@@ -1309,7 +1400,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 }
 
 <EXAMPLE_BLOCK> {
-    {Whitespace}* {LineFeed}* [=]{4,128} {LineFeed}
+    {Whitespace}* {LineFeed}* [=]{4,128} {Whitespace}* {LineFeed}
     {
                 appendSubdocument(getTextAndClear());
                 closeBlockElement();
@@ -1323,7 +1414,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 }
 
 <COMMENT_BLOCK> {
-    {Whitespace}* {LineFeed}* [/]{4,128} {LineFeed}
+    {Whitespace}* {LineFeed}* [/]{4,128} {Whitespace}* {LineFeed}
     {
                 yybegin(NEWLINE);
             }
@@ -1404,7 +1495,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 }
 
 <OPEN_BLOCK> {
-    {Whitespace}* {LineFeed}* "--" {LineFeed}
+    {Whitespace}* {LineFeed}* "--" {Whitespace}* {LineFeed}
     {
                 appendSubdocument(getTextAndClear());
                 closeBlockElement();
@@ -1418,10 +1509,10 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 }
 
 <OPEN_LISTING_BLOCK> {
-    {Whitespace}* {LineFeed}* "--" {LineFeed}
+    {Whitespace}* {LineFeed}* "--" {Whitespace}* {LineFeed}
     {
-                appendTextNode();
-                closeBlockElement();
-                yybegin(NEWLINE);
-            }
+        appendFormatted();
+        closeBlockElement();
+        yybegin(NEWLINE);
+    }
 }

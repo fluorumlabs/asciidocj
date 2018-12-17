@@ -1,0 +1,7 @@
+[source,xml,subs="-callouts"]
+.An illegal XML tag
+----
+<1>
+  content inside "1" tag
+</1>
+----

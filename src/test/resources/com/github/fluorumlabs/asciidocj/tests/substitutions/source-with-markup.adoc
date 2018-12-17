@@ -1,0 +1,4 @@
+[source,java,subs="verbatim,quotes"]
+----
+System.out.println("Hello *bold* text").
+----

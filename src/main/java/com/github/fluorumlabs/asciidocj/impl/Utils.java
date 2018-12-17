@@ -6,6 +6,7 @@ import org.jsoup.nodes.Attribute;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 
+import java.io.File;
 import java.io.Reader;
 import java.io.StringReader;
 import java.net.URI;
@@ -233,5 +234,11 @@ public class Utils {
         }
     }
 
+    public static Element getTitle(Element x) {
+        for (Element child : x.children()) {
+            if ( child.tagName().equals(AsciidocRenderer.TITLE.tag()) ) return child;
+        }
+        return null;
+    }
 
 }

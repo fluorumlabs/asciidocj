@@ -88,7 +88,7 @@ import java.io.StringReader;
                     }
 
                     properties.getJSONObject("class").put(currentValue.toString(),"");
-                } else if ( currentName.toString().equals("options") ) {
+                } else if ( currentName.toString().equals("options") || currentName.toString().equals("opts") ) {
                    if ( !properties.has("options") ) {
                       properties.put("options", new JSONObject());
                    }

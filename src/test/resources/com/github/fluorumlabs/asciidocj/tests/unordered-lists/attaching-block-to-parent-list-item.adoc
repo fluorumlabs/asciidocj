@@ -2,6 +2,7 @@
 ** parent list item
 *** child list item
 
-
 +
+----
 paragraph attached to parent list item
+----

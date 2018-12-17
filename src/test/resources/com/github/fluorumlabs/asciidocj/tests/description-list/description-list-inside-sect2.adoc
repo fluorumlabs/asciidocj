@@ -1,0 +1,11 @@
+= Document Title
+
+== Section 1.1
+
+=== Section 2
+
+term:: definition
+
+== Section 1.2
+
+term:: definition

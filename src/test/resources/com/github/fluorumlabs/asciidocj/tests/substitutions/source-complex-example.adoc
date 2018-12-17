@@ -1,0 +1,10 @@
+:version: 1.0.0
+
+[source,xml,subs="attributes+,+replacements,-callouts"]
+----
+<version>{version}</version>
+<copyright>(C) ACME</copyright>
+<1>
+  content inside "1" tag
+</1>
+----

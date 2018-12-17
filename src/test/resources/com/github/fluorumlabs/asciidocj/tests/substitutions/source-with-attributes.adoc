@@ -1,0 +1,6 @@
+:version: 1.0.0
+
+[source,xml,subs="attributes+"]
+----
+<version>{version}</version>
+----

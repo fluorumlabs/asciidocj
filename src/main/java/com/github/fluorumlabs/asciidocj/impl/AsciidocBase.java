@@ -24,6 +24,7 @@ public abstract class AsciidocBase {
     protected Document document;
     protected StringBuilder textBuilder = new StringBuilder(256);
     protected Element currentElement;
+    protected Element lastBlockParent;
 
     protected JSONObject properties = new JSONObject();
     protected JSONObject currentProperties = new JSONObject();
@@ -204,10 +205,36 @@ public abstract class AsciidocBase {
         Set<String> tags = Arrays.stream(tag)
                 .map(AsciidocRenderer::tag)
                 .collect(Collectors.toSet());
+        if ( tags.contains(currentElement.tagName())) {
+            return currentElement;
+        }
         getParents(currentElement).stream()
                 .filter(e -> tags.contains(e.tagName()))
                 .findFirst()
                 .ifPresent(e -> currentElement = e);
+
+        return currentElement;
+    }
+
+    protected Element closeToElement(Element position, AsciidocRenderer... tag) {
+        appendTextNode();
+        Set<String> tags = Arrays.stream(tag)
+                .map(AsciidocRenderer::tag)
+                .collect(Collectors.toSet());
+        if ( lastBlockParent != null ) {
+            currentElement = lastBlockParent;
+        }
+        if (position == null) {
+            position = currentElement;
+        }
+        if ( tags.contains(position.tagName())) {
+            currentElement = position;
+        } else {
+            getParents(position).stream()
+                    .filter(e -> tags.contains(e.tagName()))
+                    .findFirst()
+                    .ifPresent(e -> currentElement = e);
+        }
 
         return currentElement;
     }
@@ -217,7 +244,7 @@ public abstract class AsciidocBase {
         Set<String> tags = Arrays.stream(tag)
                 .map(AsciidocRenderer::tag)
                 .collect(Collectors.toSet());
-        return getParents(currentElement).stream()
+        return tags.contains(currentElement.tagName()) || getParents(currentElement).stream()
                 .anyMatch(e -> tags.contains(e.tagName()));
     }
 
@@ -231,6 +258,7 @@ public abstract class AsciidocBase {
 
         return currentElement;
     }
+
 
     protected Element closeElement() {
         appendTextNode();
@@ -249,12 +277,46 @@ public abstract class AsciidocBase {
         return currentElement;
     }
 
+    protected Element closeToElement(Element position, AsciidocRenderer tag, int level) {
+        appendTextNode();
+        String value = Integer.toString(level);
+        if ( lastBlockParent != null && position == null ) {
+            position = lastBlockParent;
+        }
+        if (position == null) {
+            position = currentElement;
+        }
+        currentElement = null;
+        getParents(position).stream()
+                .filter(e -> tag.tag().equals(e.tagName()) && e.attr("level").equals(value))
+                .findFirst()
+                .ifPresent(e -> currentElement = e);
+
+        if ( currentElement == null ) currentElement = position;
+        return currentElement;
+    }
+
+    protected boolean isTerminal(Element x) {
+        boolean isTerminal = true;
+        while ( x != null) {
+            isTerminal = isTerminal && (x.nextElementSibling() == null);
+            x = x.parent();
+        }
+        return isTerminal;
+    }
+
     protected Element closeBlockElement() {
         appendTextNode(true);
         getParents(currentElement).stream()
                 .filter(e -> e.tagName().endsWith("_BLOCK__"))
                 .findFirst()
-                .ifPresent(e -> currentElement = e.parent());
+                .ifPresent(e -> lastBlockParent = e.parent());
+
+        if ( isInside(AsciidocRenderer.SECTION) ) {
+            closeToElement(AsciidocRenderer.SECTION);
+        } else {
+            currentElement = document.body();
+        }
 
         return currentElement;
     }

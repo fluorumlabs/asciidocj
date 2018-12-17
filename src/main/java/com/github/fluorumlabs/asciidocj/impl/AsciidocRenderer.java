@@ -24,19 +24,18 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 public enum AsciidocRenderer {
     PARAGRAPH_BLOCK(x -> {
         x.tagName("div");
+        Element title = getTitle(x);
         if (x.hasClass("abstract")) {
             x.addClass("quoteblock");
             Element bq = new Element("blockquote");
             moveChildNodes(x, bq);
             x.appendChild(bq);
-            Element title = x.select("TITLE__").first();
             if (title != null) bq.before(title);
         } else {
             x.addClass("paragraph");
             Element p = new Element("p");
             moveChildNodes(x, p);
             x.appendChild(p);
-            Element title = x.select("TITLE__").first();
             if (title != null) p.before(title);
         }
     }),
@@ -46,19 +45,18 @@ public enum AsciidocRenderer {
     }),
     QUOTE_BLOCK(x -> {
         x.tagName("div").removeClass("quote");
+        Element title = getTitle(x);
         if (x.getProperties().has("verse%")) {
             x.addClass("verseblock");
             Element pre = new Element("pre").addClass("content");
             moveChildNodes(x, pre);
             x.appendChild(pre);
-            Element title = x.select("TITLE__").first();
             if (title != null) pre.before(title);
         } else {
             x.addClass("quoteblock");
             Element bq = new Element("blockquote");
             moveChildNodes(x, bq);
             x.appendChild(bq);
-            Element title = x.select("TITLE__").first();
             if (title != null) bq.before(title);
         }
 
@@ -203,6 +201,7 @@ public enum AsciidocRenderer {
         x.prependChild(div);
     }),
     UL(x -> {
+        Element title = getTitle(x);
         Set<String> classes = x.classNames();
         x.removeAttr("level");
         x.tagName("div").addClass("ulist");
@@ -219,10 +218,10 @@ public enum AsciidocRenderer {
         moveChildNodes(x, ul);
         x.appendChild(ul);
 
-        Element title = x.select("TITLE__").first();
         if (title != null) ul.before(title);
     }),
     OL(x -> {
+        Element title = getTitle(x);
         int level = Integer.parseInt(x.attr("level"));
         Set<String> classes = x.classNames();
         x.removeAttr("level");
@@ -272,16 +271,15 @@ public enum AsciidocRenderer {
                     break;
             }
         }
-        Element title = x.select("TITLE__").first();
         if (title != null) ol.before(title);
     }),
     DL(x -> {
+        Element title = getTitle(x);
         if (x.hasClass("qanda")) {
             x.tagName("div").addClass("qlist").removeAttr("level");
             Element ol = new Element("ol");
             moveChildNodes(x, ol);
             x.appendChild(ol);
-            Element title = x.select("TITLE__").first();
             if (title != null) ol.before(title);
         } else if (x.hasClass("horizontal")) {
             // Oh boy, horizontal dlist -- let's build a table out of <dt>'s and <dd>'s
@@ -315,7 +313,6 @@ public enum AsciidocRenderer {
             Element dl = new Element("dl");
             moveChildNodes(x, dl);
             x.appendChild(dl);
-            Element title = x.select("TITLE__").first();
             if (title != null) dl.before(title);
         }
     }),
@@ -340,6 +337,7 @@ public enum AsciidocRenderer {
 
     }),
     DD(x -> {
+        x.removeAttr("level");
         if (getArgument(getParent(x), 0).equals("qanda")) {
             // bring answer inside <DT__>
             Element dt = x.previousElementSibling();
@@ -352,11 +350,11 @@ public enum AsciidocRenderer {
         }
     }),
     COL(x -> {
+        Element title = getTitle(x);
         x.tagName("div").addClass("colist arabic");
         Element col = new Element("ol");
         moveChildNodes(x, col);
         x.appendChild(col);
-        Element title = x.select("TITLE__").first();
         if (title != null) col.before(title);
     }),
     LIST_ITEM(x -> {
@@ -380,24 +378,43 @@ public enum AsciidocRenderer {
         }
         if (x.getProperties().has("to-id")) {
             String id = x.getProperties().getString("to-id");
-            x.attr("href", "#" + id);
-            if (x.getProperties().has("to-id-contents")) {
-                x.html(x.getProperties().getString("to-id-contents"));
+            if ( id.contains("#")) {
+                x.attr("href", id);
+                if (x.getProperties().has("to-id-contents")) {
+                    x.html(x.getProperties().getString("to-id-contents"));
+                } else {
+                    x.text("[" + id + "]");
+                }
             } else {
-                String idText = x.getVariables().optString("anchor:" + id, "");
-
-                if (idText.isEmpty()) {
-                    Element target = x.ownerDocument().select("#" + id).first();
-                    if (target != null) {
-                        idText = target.text();
+                // Transform free text to id
+                if ( !x.getVariables().has("anchor:" + id) ) {
+                    // Unknown id
+                    for (String key : x.getVariables().keySet()) {
+                        if ( key.startsWith("anchor:") && id.equals(x.getVariables().optString(key)) ) {
+                            id = key.substring(7);
+                            break;
+                        }
                     }
                 }
+                x.attr("href", "#" + id);
+                if (x.getProperties().has("to-id-contents")) {
+                    x.html(x.getProperties().getString("to-id-contents"));
+                } else {
+                    String idText = x.getVariables().optString("anchor:" + id, "");
 
-                if (idText.isEmpty()) {
-                    idText = "[" + id + "]";
+                    if (idText.isEmpty()) {
+                        Element target = x.ownerDocument().getElementById(id);
+                        if (target != null) {
+                            idText = target.text();
+                        }
+                    }
+
+                    if (idText.isEmpty()) {
+                        idText = "[" + id + "]";
+                    }
+
+                    x.html(idText);
                 }
-
-                x.html(idText);
             }
             if (x.getVariables().optString("xrefstyle").equals("full") && x.getVariables().has("sectnum:" + id)) {
                 x.prependText(x.getVariables().getString("sectnum:" + id) + ", \u201c");
@@ -414,7 +431,7 @@ public enum AsciidocRenderer {
     }),
     IMAGE_BLOCK(x -> {
         x.tagName("div").addClass("imageblock");
-        Element title = x.select("TITLE__").first();
+        Element title = getTitle(x);
         Element div = new Element("div").addClass("content");
 
         if (x.getProperties().has("float")) {
@@ -441,7 +458,7 @@ public enum AsciidocRenderer {
     VIDEO_BLOCK(x -> {
         String src = x.attr("src");
         x.tagName("div").addClass("videoblock").removeAttr("src");
-        Element title = x.select("TITLE__").first();
+        Element title = getTitle(x);
         Element div = new Element("div").addClass("content");
 
         Element video;
@@ -509,7 +526,7 @@ public enum AsciidocRenderer {
     }),
     IMAGE(x -> {
         String src = x.attr("src");
-        if (x.getProperties().optString("opts").equals("interactive") && src.endsWith(".svg")) {
+        if (x.getProperties().has("options") && x.getProperties().getJSONObject("options").has("interactive") && src.endsWith(".svg")) {
             x.tagName("object").removeAttr("src").attr("data", src).attr("type", "image/svg+xml");
             if (x.hasAttr("alt")) {
                 Element span = new Element("span").addClass("alt");
@@ -554,6 +571,7 @@ public enum AsciidocRenderer {
     }),
     LISTING_BLOCK(x -> {
         x.tagName("div").addClass("listingblock").removeClass("listing");
+        Element title = getTitle(x);
         Element div = new Element("div").addClass("content");
         if (getArgument(x, 0).equals("source") || x.hasClass("source")) {
             String language = getArgument(x, 1);
@@ -584,7 +602,6 @@ public enum AsciidocRenderer {
             x.appendChild(div);
         }
 
-        Element title = x.select("TITLE__").first();
         if (title != null) div.before(title);
     }),
     SIDEBAR_BLOCK(x -> {
@@ -595,11 +612,11 @@ public enum AsciidocRenderer {
     }),
     EXAMPLE_BLOCK(x -> {
         x.tagName("div").addClass("exampleblock");
+        Element title = getTitle(x);
         Element div = new Element("div").addClass("content");
         moveChildNodes(x, div);
         x.appendChild(div);
 
-        Element title = x.select("TITLE__").first();
         if (title != null) div.before(title);
     }),
     KEYBOARD(x -> {

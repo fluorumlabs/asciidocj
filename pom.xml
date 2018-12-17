@@ -139,6 +139,7 @@
                             <attributes>
                                 <showtitle>true</showtitle>
                                 <experimental>true</experimental>
+                                <skip-front-matter>true</skip-front-matter>
                             </attributes>
                         </configuration>
                     </execution>
