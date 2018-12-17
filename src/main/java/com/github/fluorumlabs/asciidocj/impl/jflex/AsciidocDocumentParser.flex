@@ -525,12 +525,17 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
         closeElement(AsciidocRenderer.QUOTE_BLOCK);
     }
 
-    [`]{3,128} {Whitespace}* {LineFeed}
+    [`]{3,128} [a-z\-_]* {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
                 String caption = properties.optString("caption","\0");
 
-                openElement(AsciidocRenderer.LISTING_BLOCK);
+                String language = skipLeft(trimAll(yytext()),"`");
+                if ( !language.isEmpty() ) {
+                    properties.put("source-language", language);
+                }
+
+                openElement(AsciidocRenderer.LISTING_BLOCK).addClass("source");
 
                 if (!titleHtml.isEmpty()) {
                     openElement(AsciidocRenderer.TITLE).attr("caption", caption)

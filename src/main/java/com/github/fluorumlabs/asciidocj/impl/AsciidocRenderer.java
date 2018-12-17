@@ -575,6 +575,7 @@ public enum AsciidocRenderer {
         Element div = new Element("div").addClass("content");
         if (getArgument(x, 0).equals("source") || x.hasClass("source")) {
             String language = getArgument(x, 1);
+            if (language.isEmpty()) language = x.getProperties().optString("source-language");
             if (language.isEmpty()) language = x.getVariables().optString("source-language");
             Element pre = new Element("pre")
                     .addClass("highlight");
