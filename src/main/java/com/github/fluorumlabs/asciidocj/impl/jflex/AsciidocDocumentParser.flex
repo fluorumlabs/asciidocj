@@ -1451,7 +1451,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     {CellFormat} "|"
     {
                 tableCellCounter++;
-                properties.put("format",CellFormatParser.parse(extractBeforeStrict(yytext(),"|")));
+                properties.put("format",CellFormatParser.parse(trimLeft(extractBeforeStrict(yytext(),"|"))));
                 openElement(AsciidocRenderer.TABLE_CELL);
                 yypushback(yytext().length() - yytext().indexOf("|") - 1);
                 yybegin(TABLE_CELL);
@@ -1470,7 +1470,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 }
 
 <TABLE_CELL> {
-    {CellFormat} "|" |
+    "|" |
+    {Whitespace} {CellFormat} "|" |
     {LineFeed} {CellFormat} "|" |
     {LineFeed} {Whitespace}* {LineFeed} {CellFormat} "|"
     {
