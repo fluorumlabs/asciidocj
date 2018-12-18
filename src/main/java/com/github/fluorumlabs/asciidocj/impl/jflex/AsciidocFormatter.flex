@@ -54,6 +54,9 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
                     public Document parse(String text, JSONObject properties, JSONObject attributes) throws ParserException {
                         this.properties = properties;
                         this.attributes = attributes;
+
+                        properties.remove("raw:properties");
+
                         document = Document.createShell("");
                         document.outputSettings().prettyPrint(false);
                         currentElement = document.body();
@@ -63,6 +66,16 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 
                         if ( attributes.has(":listing") ) {
                             disabled.remove(Pass.CALLOUTS);
+                            disabled.add(Pass.QUOTES);
+                            disabled.add(Pass.ATTRIBUTES);
+                            disabled.add(Pass.REPLACEMENTS);
+                            disabled.add(Pass.MACROS);
+                            disabled.add(Pass.POST_REPLACEMENTS);
+                            disabled.add(Pass.ESCAPES);
+                        }
+
+                        if ( attributes.has(":literal") ) {
+                            disabled.add(Pass.CALLOUTS);
                             disabled.add(Pass.QUOTES);
                             disabled.add(Pass.ATTRIBUTES);
                             disabled.add(Pass.REPLACEMENTS);
@@ -173,9 +186,10 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
                         }
 
                         try {
-                            yyreset(getReader(text, false));
+                            yyreset(getReader(text+"\0", false));
                             parseInput();
                             appendTextNode(); // If needed
+
                             return document;
                         } catch (IOException e) {
                             throw new ParserException(e);
@@ -203,17 +217,18 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 
                     private void appendFormatted(String text) throws ParserException {
                         if (formatter == null) formatter = new AsciidocFormatter();
+                        appendText("");
                         appendDocument(formatter.parse(text, properties, attributes));
+                        properties = new JSONObject();
                     }
 
-                    private static final String QUOTED_EXTRACT_REGEXP = "^[\1]([\\s\\S]*?[^\\s])[\1]([^\1\\w]|$)";
-                    private static final Pattern PLUS_ESCAPE_PATTERN = Pattern.compile("\\+\\+\\+(.+?)\\+\\+\\+");
+                    private static final Pattern QUOTED_EXTRACT_PATTERN = Pattern.compile("^[\1]([\\s\\S]*?[^\\s])[\1]([^\1\\w]|$)");
+                    private static final Pattern PLUS_ESCAPE_PATTERN = Pattern.compile("\\+\\+\\+([\\s\\S]+?)\\+\\+\\+");
 
                     private String extractQuoted(String x, char marker) {
-                        String escaped = replaceFunctional(PLUS_ESCAPE_PATTERN,x,strings -> strings[0].replace(marker,'\2'));
+                        String escaped = replaceFunctional(PLUS_ESCAPE_PATTERN,x.replace(marker,'\1'),strings -> strings[0].replace('\1','\2'));
 
-                        String pattern = QUOTED_EXTRACT_REGEXP.replace('\1', marker);
-                        Matcher matcher = Pattern.compile(pattern).matcher(escaped);
+                        Matcher matcher = QUOTED_EXTRACT_PATTERN.matcher(escaped);
                         if (!matcher.find()) {
                             return "";
                         } else {
@@ -244,6 +259,24 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
                         }
                     }
 
+                    @Override
+                    protected void appendText(String toAdd) {
+                        if ( properties.has("raw:properties")) {
+                            String text = properties.getString("raw:properties");
+                            properties = new JSONObject();
+                            super.appendText("[");
+                            super.appendTextNode();
+                            try {
+                                appendFormatted(text);
+                            } catch (ParserException ignore) {
+                                // ...
+                            }
+                            properties = new JSONObject();
+                            super.appendText("]");
+                        }
+                        super.appendText(toAdd);
+                    }
+
 %}
 
 LineFeed                    = \R | \0
@@ -253,7 +286,7 @@ NoWhitespace			    = [^\s]
 EmailAddress                = [a-zA-Z0-9.!#$%&'*+/=?\^_`{|}~\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,128}
 URLDomainPart               = "www."? [-a-zA-Z0-9@:%._\+~#=]{2,256} "." [a-z]{2,128}
 URLDomainPartWithLocalhost  = {URLDomainPart} | "localhost"
-URL                         = (("http" [s]?)|"irc") "://" {URLDomainPartWithLocalhost} [-a-zA-Z0-9@:%_\+.,~#?!&//()=*]*
+URL                         = (("http" [s]?)|"irc") "://" {URLDomainPartWithLocalhost} [-a-zA-Z0-9@:%_\+.,~#?!&//=()*]*
 
 NoLineFeed                  = [^\r\n\u2028\u2029\u000B\u000C\u0085\0]
 
@@ -365,7 +398,9 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 }
             }
 
-    "`" [^\s`\"\'] [^]*
+    "`" [^\s`\"\'] [^]* |
+    "`\"" ~ "\"`" |
+    "`'" ~ "\`"
     {
                 if ( fallback(Pass.QUOTES) ) break;
 
@@ -482,7 +517,7 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 String href = extractBefore(content, "[");
                 String text = extractBetween(content, "[", "]");
 
-                if (text.isEmpty() && (href.endsWith("!") || href.endsWith(",") || href.endsWith(".") || href.endsWith(":") || href.endsWith("~"))) {
+                if (text.isEmpty() && (href.endsWith("!") || href.endsWith(",") || href.endsWith(")") || href.endsWith(".") || href.endsWith(":") || href.endsWith("~"))) {
                     href = stripTail(href, 1);
                     yypushback(1);
                 }
@@ -536,7 +571,7 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 yybegin(YYINITIAL);
             }
 
-    "link:" [^\s\[]+ {Properties}? |
+    "link:" [^\s\[<]+ {Properties}? |
     {URL} {Properties}?
     {
                 if ( fallback(Pass.MACROS) ) break;
@@ -548,7 +583,8 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 String href = extractBefore(content, "[");
                 String text = extractBetween(content, "[", "]");
 
-                if (text.isEmpty() && (href.endsWith("!") || href.endsWith(",") || href.endsWith(".") || href.endsWith(":") || href.endsWith("~"))) {
+                if (text.isEmpty() && (href.endsWith("!") || href.endsWith(",") || href.endsWith(".") || href.endsWith(":") || href.endsWith("~") ||
+                    (href.endsWith(")") && !href.contains("(")))) {
                     href = stripTail(href, 1);
                     yypushback(1);
                 }
@@ -661,7 +697,7 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
             }
 
     "menu:" [^\R\[]+ {Properties} |
-    "\"" [^\">]+ (">" [^\">]+)+ "\""
+    "\"" [^\"><]+ (">" [^\"><]+)+ "\""
     {
                 if ( fallback(Pass.MACROS) ) break;
 
@@ -721,6 +757,9 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
 }
 
 <YYINITIAL, INSIDE_WORD> {
+    \0
+    {}
+
     /* Newlines */
     {Whitespace} "+" {Whitespace}* {LineFeed}
     {
@@ -729,6 +768,7 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 appendElement("br");
                 appendText("\n");
                 yybegin(YYINITIAL);
+                yypushback(1);
             }
 
     {LineFeed}
@@ -807,6 +847,9 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 if ( fallback(Pass.QUOTES) ) break;
 
                 String text = strip(yytext(), 1, 1);
+
+                properties.put("raw:properties", text);
+
                 PropertiesParser.parse(text, properties, true);
                 if (!properties.has("class")) {
                     properties.put("class", new JSONObject());
@@ -838,15 +881,17 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
             }
 
     /* Formatting */
-    "+++" {NoLineFeed}+ "+++"
+    "+++" . ~ "+++"
     {
                 if ( fallback(Pass.QUOTES) ) break;
 
                 appendTextNode();
+                openElement(AsciidocRenderer.SPAN);
                 currentElement.append(strip(yytext(), 3, 3));
+                closeElement(AsciidocRenderer.SPAN);
             }
 
-    "`+" {NoLineFeed}+ "+`"
+    "`+" . ~ "+`"
     {
                 if ( fallback(Pass.QUOTES) ) break;
 
@@ -886,7 +931,9 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
     {
                 if ( fallback(Pass.QUOTES) ) break;
 
+                openElement(AsciidocRenderer.SPAN);
                 appendText(trim(yytext(), "+"));
+                closeElement(AsciidocRenderer.SPAN);
             }
     /*"__" | "_"
     {
@@ -1075,6 +1122,12 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 appendText(yytext());
                 yybegin(YYINITIAL);
             }
+
+    <<EOF>>
+    {
+                appendText("");
+                return null;
+      }
 }
 
 <INSIDE_WORD> {

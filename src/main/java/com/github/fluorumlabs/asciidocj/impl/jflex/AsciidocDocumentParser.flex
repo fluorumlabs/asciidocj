@@ -89,7 +89,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
         textBuilder.setLength(0);
 
         try {
-            yyreset(getReader(text.replace("\r\n", "\n"), true));
+            yyreset(getReader(processLegacy(text.replace("\r\n", "\n")), true));
             parseInput();
             appendTextNode(); // If needed
             return document;
@@ -110,13 +110,14 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
             shadowProperties.put("options", currentProperties.get("options"));
         }
         String text = getTextAndClear();
-        if (!attributes.has(":listing")) {
+        if (!attributes.has(":listing") && !attributes.has(":literal")) {
             text = trimAll(text);
         }
         appendDocument(formatter.parse(text, shadowProperties, attributes));
         attributes.remove(":pass");
         attributes.remove(":subs");
         attributes.remove(":listing");
+        attributes.remove(":literal");
     }
 
     /**
@@ -153,6 +154,8 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
     private JSONObject tableProperties;
     private int tableCellCounter;
     private Element lastListItem = null;
+
+    private boolean isDocumentTitle = true;
 %}
 
 LineFeed                    = \R | \0
@@ -202,11 +205,13 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 %%
 
 <YYINITIAL> {
+    "---" {LineFeed} [^]* {LineFeed} "---" {LineFeed} {Whitespace}* {LineFeed} |
     "---" {LineFeed} [^]* {LineFeed} "---" {LineFeed}
     {
                 // Skip front matter
             }
 
+    {Whitespace}* {LineFeed} |
     \0
     {
             }
@@ -247,7 +252,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
 <NEWLINE> {
     {Whitespace}* {LineFeed} {
-
+          isDocumentTitle = false;
       }
 
     ":!" {AttributeName} ":" {Whitespace}* {LineFeed} |
@@ -397,8 +402,29 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
     [.]{4,128} {Whitespace}* {LineFeed}
     {
-                openElement(AsciidocRenderer.LITERAL_BLOCK);
-                yybegin(LITERAL_BLOCK);
+                String titleHtml = properties.optString("title:html");
+                String caption = properties.optString("caption","\0");
+                boolean isListing = false;
+
+                if ( hasClass("source") || getArgument(0).equals("source")) {
+                    isListing = true;
+                    openElement(AsciidocRenderer.LISTING_BLOCK);
+                } else{
+                    openElement(AsciidocRenderer.LITERAL_BLOCK);
+                }
+
+                if (!titleHtml.isEmpty()) {
+                    openElement(AsciidocRenderer.TITLE).attr("caption", caption)
+                            .html(titleHtml);
+                    closeElement(AsciidocRenderer.TITLE);
+                }
+
+                if ( isListing ) {
+                    attributes.put(":listing",true);
+                } else {
+                    attributes.put(":literal",true);
+                }
+               yybegin(LITERAL_BLOCK);
             }
 
     "--" {Whitespace}* {LineFeed}
@@ -560,7 +586,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 properties.put("title:html", format);
             }
 
-    [=]{1,6} [^\f\n=] {Whitespace}* {NoLineFeed}+ {LineFeed}
+    [=]{1,6} {Whitespace}+ {NoLineFeed}+ {LineFeed} |
+    [#]{1,6} {Whitespace}+ {NoLineFeed}+ {LineFeed}
     {
                 yypushback(1);
 
@@ -568,11 +595,14 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
                 String text = yytext();
                 int level = 0;
-                while (text.charAt(level) == '=') {
+                while (text.charAt(level) == '=' || text.charAt(level) == '#') {
                     level++;
                 }
-                String title = trimAll(skipLeft(text, "= \t"));
+                String title = trimAll(skipLeft(text, "=# \t"));
                 if (level > 0) {
+                    closeElement(AsciidocRenderer.SECTION, level + 4);
+                    closeElement(AsciidocRenderer.SECTION, level + 3);
+                    closeElement(AsciidocRenderer.SECTION, level + 2);
                     closeElement(AsciidocRenderer.SECTION, level + 1);
                     closeElement(AsciidocRenderer.SECTION, level);
                     if (level > 1) {
@@ -580,6 +610,9 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     }
                     JSONObject props = properties;
                     openElement(AsciidocRenderer.SECTION).attr("level", Integer.toString(level));
+                    if ( isDocumentTitle && level == 1) {
+                        currentElement.attr("is-document-title",true);
+                    }
                     properties = props;
                 }
                 Document formattedTitle = getFormatted(title);
@@ -624,7 +657,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     }
                 }
 
-                if ( id.isEmpty() && level > 1 && !attributes.has("sectids!")) {
+                if ( id.isEmpty() && (level > 1 || !isDocumentTitle) && !attributes.has("sectids!")) {
                     id = attributes.optString("idprefix","_") + AsciidocRenderer.slugify(formattedTitle.text()).replace("_",attributes.optString("idseparator","_"));
                     properties.put("id", id);
                 }
@@ -639,15 +672,19 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 }
 
                 openElement(AsciidocRenderer.HEADER).attr("level", Integer.toString(level)).attr("sectNum", num.toString());
+                if ( isDocumentTitle && level == 1) {
+                    currentElement.attr("is-document-title",true);
+                }
                 appendDocument(formattedTitle);
                 closeElement(AsciidocRenderer.HEADER);
 
-                if (level == 1) {
+                if (level == 1 && isDocumentTitle) {
                     if ( !attributes.has("doctitle") ) {
                         attributes.put("doctitle", formattedTitleString);
                     }
                     yybegin(SKIP);
                 }
+                isDocumentTitle = false;
 
                 lastBlockParent = currentElement;
             }
@@ -768,7 +805,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 yybegin(LIST_PARAGRAPH);
             }
 
-    {Whitespace}* ([1-9][0-9]*)? [.]{1,5} {Whitespace}
+    {Whitespace}* ([1-9][0-9]?)? [.]{1,5} {Whitespace}
     {
                 String titleHtml = properties.optString("title:html");
 
@@ -829,7 +866,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 yybegin(LIST_PARAGRAPH);
             }
 
-    "<" [1-9][0-9]* ">" {Whitespace}
+    "<" [1-9][0-9]? ">" {Whitespace}
     {
                 String titleHtml = properties.optString("title:html");
 
@@ -1128,15 +1165,20 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     {LineFeed}? "ifndef::" {AttributeName} "[]" {Whitespace}* {LineFeed} ~ "endif::" {NoLineFeed}* {LineFeed} |
     {LineFeed}? {Whitespace}* [*]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
     {LineFeed}? {Whitespace}* [-]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
-    {LineFeed}? {Whitespace}* ([1-9][0-9]*)? [.]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
+    {LineFeed}? {Whitespace}* ([1-9][0-9]?)? [.]{1,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
     {LineFeed}? {Whitespace}* {NoLineFeed}+ [:]{2,5} {Whitespace} {NoLineFeed}+ {LineFeed} |
     {LineFeed}? {Whitespace}* {NoLineFeed}+ [:]{2,5} {Whitespace}* {LineFeed} |
-    {LineFeed}? "<" [1-9][0-9]* ">" {Whitespace} {NoLineFeed}+ {LineFeed} |
+    {LineFeed}? "<" [1-9][0-9]? ">" {Whitespace} {NoLineFeed}+ {LineFeed} |
     {LineFeed}? ":" {AttributeName} ":" |
     {LineFeed}? ":!" {AttributeName} ":" |
     {LineFeed}? ":" {AttributeName} "!:" |
+    {LineFeed}? "[[" {NoLineFeed}+ "]]" {Whitespace}* {LineFeed} |
     {LineFeed}? {Properties} {Whitespace}* {LineFeed} |
-    {LineFeed}* "+" {Whitespace}* {LineFeed}
+    {LineFeed}* "+" {Whitespace}* {LineFeed} |
+    {LineFeed}* [`]{3,128} [a-z\-_]* {Whitespace}* {LineFeed} |
+    {LineFeed}? [=]{1,6} {Whitespace}+ {NoLineFeed}+ {LineFeed} |
+    {LineFeed}? [#]{1,6} {Whitespace}+ {NoLineFeed}+ {LineFeed} |
+    {LineFeed}* [/]{4,128} {Whitespace}* {LineFeed}
     {
         if ( yytext().startsWith("if") && !yytext().contains("\n+\n")) {
             appendText(yytext());
@@ -1259,17 +1301,9 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 <LITERAL_BLOCK> {
     {Whitespace}* {LineFeed}* [.]{4,128} {Whitespace}* {LineFeed}
     {
-                appendTextNode();
+                appendFormatted();
                 closeBlockElement();
                 yybegin(NEWLINE);
-            }
-
-    {NoLineFeed}* {LineFeed}
-    {
-                if (!getText().isEmpty()) {
-                    appendText("\n");
-                }
-                appendText(stripTail(yytext(), 1));
             }
 }
 
@@ -1366,7 +1400,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     }
 }
 
-<OPEN_LISTING_BLOCK, LISTING_BLOCK, LISTING_PARAGRAPH, LISTING_FENCE_BLOCK> {
+<OPEN_LISTING_BLOCK, LISTING_BLOCK, LISTING_PARAGRAPH, LISTING_FENCE_BLOCK, LITERAL_BLOCK> {
 
     {Whitespace}* {LineFeed}
     {

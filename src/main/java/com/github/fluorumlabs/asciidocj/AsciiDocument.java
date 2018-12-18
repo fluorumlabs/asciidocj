@@ -1,5 +1,6 @@
 package com.github.fluorumlabs.asciidocj;
 
+import com.github.fluorumlabs.asciidocj.impl.AsciidocBase;
 import com.github.fluorumlabs.asciidocj.impl.ParserException;
 import com.github.fluorumlabs.asciidocj.impl.jflex.AsciidocDocumentParser;
 import org.json.JSONObject;

@@ -1,5 +1,6 @@
 package com.github.fluorumlabs.asciidocj.impl;
 
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.nodes.Document;
@@ -12,6 +13,7 @@ import org.jsoup.select.Elements;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 
@@ -403,11 +405,10 @@ public abstract class AsciidocBase {
         document.select("mark[class], mark[id]").tagName("span");
 
         // Preamble postprocessing
-        boolean isFirst = true;
         for (Element preamble : document.select("div#preamble")) {
-            if (preamble != null && preamble.text().isEmpty()) {
+            if (preamble.text().isEmpty()) {
                 preamble.remove();
-            } else if (preamble != null && (document.select("h2,h3,h4,h5,h6").isEmpty() || !isFirst)) {
+            } else if ((document.select("h2,h3,h4,h5,h6").isEmpty() || !preamble.hasAttr("is-document-title"))) {
                 Element section = preamble.select("div.sectionbody").first();
                 if (section != null) {
                     List<Node> nodes = new ArrayList<>(section.childNodes());
@@ -417,7 +418,7 @@ public abstract class AsciidocBase {
                 }
                 preamble.remove();
             }
-            isFirst = false;
+            preamble.removeAttr("is-document-title");
         }
 
         // TOC postprocessing
@@ -426,9 +427,11 @@ public abstract class AsciidocBase {
                 .collect(Collectors.joining(","));
 
         int currentLevel = 1;
+        boolean emptyToc = true;
         Element currentList = toc;
         for (Element header : document.select(selector)) {
             int level = Integer.parseInt(header.tagName().substring(1));
+            emptyToc = false;
             if ( currentLevel < level ) {
                 Element newList = new Element("ul").addClass(String.format("sectlevel%d",level-1));
                 currentList.appendChild(newList);
@@ -462,6 +465,83 @@ public abstract class AsciidocBase {
         if ( toc.tagName().equals(AsciidocRenderer.TOC.tag())) {
             ((AsciidocElement)toc).process();
         }
+        if ( emptyToc && toc.parent() != null) {
+            toc.remove();
+        }
+    }
 
+    private static boolean isDelimited(String line, char marker) {
+        return line.equals(StringUtils.repeat(marker, line.length()));
+    }
+
+    public static String processLegacy(String source) {
+        List<String> lines = new ArrayList<>(Arrays.asList(source.split("\r\n|\n")));
+        int i = 0;
+        String currentLine = "";
+        String nextLine = "";
+        char delimitation = 0;
+        while ( i < lines.size()-1 ) {
+            currentLine = trimRight(lines.get(i));
+            nextLine = trimRight(lines.get(i+1));
+            // Check if it's a delimited block and skip whatever we have there
+            if ( currentLine.length() > 0 ) {
+                if ( delimitation == 0
+                        || (currentLine.length()>=4 && isDelimited(currentLine,delimitation))
+                        || (currentLine.length()>=4 && currentLine.startsWith("|") && isDelimited(stripHead(currentLine,1), delimitation))) {
+                    if ( delimitation == '/' ) {
+                        lines.remove(i);
+                        delimitation = 0;
+                        continue;
+                    }
+                    char newDelimitation = currentLine.startsWith("|") && currentLine.length() > 1 ? currentLine.charAt(1) : currentLine.charAt(0);
+                    if ( delimitation == 0 && ((currentLine.length()>=4 && isDelimited(currentLine, newDelimitation) && "=_-./".indexOf(newDelimitation) >= 0)
+                        || (currentLine.startsWith("```") )
+                        || (currentLine.length()>=4 && currentLine.startsWith("|") && isDelimited(stripHead(currentLine,1), newDelimitation) && "=".indexOf(newDelimitation) >= 0))) {
+                        delimitation = newDelimitation;
+                    } else {
+                        delimitation = 0;
+                        if (currentLine.startsWith("//")) {
+                            lines.remove(i);
+                            continue;
+                        }
+                        if (nextLine.length() > 0
+                                && StringUtils.isAlphanumeric(currentLine.substring(0, 1))) {
+                            char marker = nextLine.charAt(0);
+                            if ("=-~^+".indexOf(marker) >= 0
+                                    && nextLine.equals(StringUtils.repeat(marker, nextLine.length()))
+                                    && Math.abs(nextLine.length() - currentLine.length()) <= 1) {
+                                int level = 0;
+                                switch (marker) {
+                                    case '=':
+                                        level = 1;
+                                        break;
+                                    case '-':
+                                        level = 2;
+                                        break;
+                                    case '~':
+                                        level = 3;
+                                        break;
+                                    case '^':
+                                        level = 4;
+                                        break;
+                                    case '+':
+                                        level = 5;
+                                        break;
+                                }
+                                lines.remove(i + 1);
+                                lines.remove(i);
+                                lines.add(i, StringUtils.repeat('=', level) + " " + currentLine);
+                            }
+                        }
+                    }
+                }
+            }
+            if ( delimitation == '/' ) {
+                lines.remove(i);
+            } else {
+                i++;
+            }
+        }
+        return String.join("\n", lines);
     }
 }

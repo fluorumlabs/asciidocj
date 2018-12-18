@@ -188,11 +188,10 @@ public enum AsciidocRenderer {
             x.appendChild(a);
         }
 
-        if (x.parent() != document.body() || document.select("h1").first() != x) {
-            if (x.parent() == document.body()) {
-                x.addClass("sect0");
-            }
+        if (!x.hasAttr("is-document-title") && x.tagName().equals("h1")) {
+            x.addClass("sect0");
         }
+        x.removeAttr("is-document-title");
     }),
     TOC(x -> {
         x.tagName("div").addClass("toc").attr("id", "toc");
@@ -379,6 +378,7 @@ public enum AsciidocRenderer {
         if (x.getProperties().has("to-id")) {
             String id = x.getProperties().getString("to-id");
             if ( id.contains("#")) {
+                if ( id.endsWith("#") ) id = stripTail(id,1);
                 x.attr("href", id);
                 if (x.getProperties().has("to-id-contents")) {
                     x.html(x.getProperties().getString("to-id-contents"));
@@ -668,6 +668,14 @@ public enum AsciidocRenderer {
     BUTTON(x -> {
         x.tagName("b").addClass("button").text(x.getProperties().optString("button", ""));
     }),
+    SPAN(x -> {
+        if ( x.classNames().isEmpty() ) {
+            moveChildNodesToParent(x);
+            x.remove();
+        } else {
+            x.tagName("span");
+        }
+    }),
     TABLE_CELL(Node::remove), // Cell contents is handled by TABLE_BLOCK
     TABLE_BLOCK(x -> {
         DecimalFormat widthFormatter = new DecimalFormat("#.####");
@@ -688,7 +696,7 @@ public enum AsciidocRenderer {
             x.addClass("stripes-" + x.getProperties().getString("stripes"));
         }
 
-        if (x.getProperties().has("width") ) {
+        if (x.getProperties().has("width") && !x.getProperties().getString("width").equals("100%") ) {
             x.attr("style", "width: " + x.getProperties().getString("width") + ";");
         } else if ( hasOption(x,"autowidth") ) {
             x.addClass("fit-content");
