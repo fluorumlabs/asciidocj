@@ -1,0 +1,2 @@
+This shoud be displayed as is: {uri-asciidoctorj}[AsciidoctorJ] (no attribute, and nowhere to attach properties)
+

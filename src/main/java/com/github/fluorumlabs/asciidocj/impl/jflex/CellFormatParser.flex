@@ -86,6 +86,10 @@ TCAlign                     = "."? [\^<>]
           }
       }
 
+    "d" {
+          format.put("default",true);
+      }
+
     "a" {
           format.put("asciidoc",true);
       }

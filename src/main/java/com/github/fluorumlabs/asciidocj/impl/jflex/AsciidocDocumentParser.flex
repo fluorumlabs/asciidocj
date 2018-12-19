@@ -212,9 +212,11 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
             }
 
     {Whitespace}* {LineFeed} |
+    "//" .* {LineFeed} |
     \0
     {
             }
+
 
     [^]
     {
@@ -283,17 +285,17 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 attributes.remove(parts[1]+"!");
             }
 
-    "[[" {NoLineFeed}+ "]]" {Whitespace}* {LineFeed}
+    "[[" {NoLineFeed}* "]]" {Whitespace}* {LineFeed}
     {
                 String[] id = extractBetween(yytext(), "[[", "]]").split(",",2);
-                if ( id.length>0 ) properties.put("id", id[0]);
-                if ( id.length>1 ) properties.put("reftext", getFormatted(id[1]).body().html());
+                if ( id.length>0 && !id[0].isEmpty()) properties.put("id", id[0]);
+                if ( id.length>1 && !id[0].isEmpty()) properties.put("reftext", escapeIntermediate(getFormatted(id[1])));
             }
 
     "[" {NoLineFeed}+ "'" {NoLineFeed}+ "']" {Whitespace}* {LineFeed} |
     "[" {NoLineFeed}+ "]" {Whitespace}* {LineFeed}
     {
-                PropertiesParser.parse(strip(yytext(), 1, 2), properties, true);
+                PropertiesParser.parse(strip(trimAll(yytext()), 1, 1), properties, true);
                 if ( properties.has("subs") ) {
                     attributes.put(":subs",properties.get("subs"));
                 }
@@ -325,8 +327,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
                 if (!titleHtml.isEmpty()) {
                     openElement(AsciidocRenderer.TITLE).attr("caption", caption)
-                            .attr("type", "Table")
-                            .html(titleHtml);
+                            .attr("type", "Table");
+                    attachEscaped(titleHtml);
                     closeElement(AsciidocRenderer.TITLE);
                 }
 
@@ -357,8 +359,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 openElement(AsciidocRenderer.SIDEBAR_BLOCK);
 
                 if (!titleHtml.isEmpty()) {
-                    openElement(AsciidocRenderer.TITLE).attr("caption", caption)
-                            .html(titleHtml);
+                    openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                    attachEscaped(titleHtml);
                     closeElement(AsciidocRenderer.TITLE);
                 }
                 yybegin(SIDEBAR_BLOCK);
@@ -380,19 +382,19 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     properties.getJSONObject("class").remove(admonitionType.toUpperCase());
                     openElement(AsciidocRenderer.ADMONITION_BLOCK)
                         .attr("subtype", admonitionType)
-                        .attr("text", getFormatted(attributes.optString(admonitionType+"-caption",StringUtils.capitalize(admonitionType))).body().html());
+                        .attr("text", escapeIntermediate(getFormatted(attributes.optString(admonitionType+"-caption",StringUtils.capitalize(admonitionType)))));
 
                     if (!titleHtml.isEmpty()) {
-                        openElement(AsciidocRenderer.TITLE).attr("caption", caption)
-                                .html(titleHtml);
+                        openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                        attachEscaped(titleHtml);
                         closeElement(AsciidocRenderer.TITLE);
                     }
                 } else {
                     openElement(AsciidocRenderer.EXAMPLE_BLOCK);
 
                     if (!titleHtml.isEmpty()) {
-                        openElement(AsciidocRenderer.TITLE).attr("caption", caption).attr("type", "Example")
-                                .html(titleHtml);
+                        openElement(AsciidocRenderer.TITLE).attr("caption", caption).attr("type", "Example");
+                        attachEscaped(titleHtml);
                         closeElement(AsciidocRenderer.TITLE);
                     }
                 }
@@ -414,8 +416,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 }
 
                 if (!titleHtml.isEmpty()) {
-                    openElement(AsciidocRenderer.TITLE).attr("caption", caption)
-                            .html(titleHtml);
+                    openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                    attachEscaped(titleHtml);
                     closeElement(AsciidocRenderer.TITLE);
                 }
 
@@ -433,7 +435,25 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 String caption = properties.optString("caption","\0");
                 boolean isListing = false;
 
-                if ( hasClass("abstract")  || getArgument(0).equals("abstract")) {
+                String admonitionType = null;
+                if (hasClass("NOTE")) admonitionType = "note";
+                if (hasClass("TIP")) admonitionType = "tip";
+                if (hasClass("IMPORTANT")) admonitionType = "important";
+                if (hasClass("WARNING")) admonitionType = "warning";
+                if (hasClass("CAUTION")) admonitionType = "caution";
+
+                if (admonitionType != null) {
+                    properties.getJSONObject("class").remove(admonitionType.toUpperCase());
+                    openElement(AsciidocRenderer.ADMONITION_BLOCK)
+                        .attr("subtype", admonitionType)
+                        .attr("text", escapeIntermediate(getFormatted(attributes.optString(admonitionType+"-caption",StringUtils.capitalize(admonitionType)))));
+
+                    if (!titleHtml.isEmpty()) {
+                        openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                        attachEscaped(titleHtml);
+                        closeElement(AsciidocRenderer.TITLE);
+                    }
+                } else if ( hasClass("abstract")  || getArgument(0).equals("abstract")) {
                     openElement(AsciidocRenderer.QUOTE_BLOCK);
                 } else if ( hasClass("sidebar")  || getArgument(0).equals("sidebar")) {
                     openElement(AsciidocRenderer.SIDEBAR_BLOCK);
@@ -445,8 +465,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 }
 
                 if (!titleHtml.isEmpty()) {
-                    openElement(AsciidocRenderer.TITLE).attr("caption", caption)
-                            .html(titleHtml);
+                    openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                    attachEscaped(titleHtml);
                     closeElement(AsciidocRenderer.TITLE);
                 }
 
@@ -466,8 +486,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 openElement(AsciidocRenderer.LISTING_BLOCK);
 
                 if (!titleHtml.isEmpty()) {
-                    openElement(AsciidocRenderer.TITLE).attr("caption", caption)
-                            .html(titleHtml);
+                    openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                    attachEscaped(titleHtml);
                     closeElement(AsciidocRenderer.TITLE);
                 }
 
@@ -481,8 +501,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 String caption = properties.optString("caption","\0");
 
                 if ( getArgument(0).equals("quote") || getArgument(0).equals("verse")) {
-                    properties.put("quote:attribution", getFormatted(getArgument(1)).body().html());
-                    properties.put("quote:cite", getFormatted(getArgument(2)).body().html());
+                    properties.put("quote:attribution", escapeIntermediate(getFormatted(getArgument(1))));
+                    properties.put("quote:cite", escapeIntermediate(getFormatted(getArgument(2))));
                 }
 
                 boolean isVerse = getArgument(0).equals("verse");
@@ -493,8 +513,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 openElement(AsciidocRenderer.QUOTE_BLOCK);
 
                 if (!titleHtml.isEmpty()) {
-                    openElement(AsciidocRenderer.TITLE).attr("caption", caption)
-                            .html(titleHtml);
+                    openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                    attachEscaped(titleHtml);
                     closeElement(AsciidocRenderer.TITLE);
                 }
 
@@ -510,14 +530,14 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 String titleHtml = properties.optString("title:html");
                 String caption = properties.optString("caption","\0");
 
-                properties.put("quote:attribution", getFormatted(getArgument(1)).body().html());
-                properties.put("quote:cite", getFormatted(getArgument(2)).body().html());
+                properties.put("quote:attribution", escapeIntermediate(getFormatted(getArgument(1))));
+                properties.put("quote:cite", escapeIntermediate(getFormatted(getArgument(2))));
 
                 openElement(AsciidocRenderer.QUOTE_BLOCK);
 
                 if (!titleHtml.isEmpty()) {
-                    openElement(AsciidocRenderer.TITLE).attr("caption", caption)
-                            .html(titleHtml);
+                    openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                    attachEscaped(titleHtml);
                     closeElement(AsciidocRenderer.TITLE);
                 }
 
@@ -535,14 +555,14 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
         String titleHtml = properties.optString("title:html");
         String caption = properties.optString("caption","\0");
 
-        if ( attribution.length > 0 ) properties.put("quote:attribution", getFormatted(attribution[0].trim()).body().html());
-        if ( attribution.length > 1 ) properties.put("quote:cite", getFormatted(attribution[1].trim()).body().html());
+        if ( attribution.length > 0 ) properties.put("quote:attribution", escapeIntermediate(getFormatted(attribution[0].trim())));
+        if ( attribution.length > 1 ) properties.put("quote:cite", escapeIntermediate(getFormatted(attribution[1].trim())));
 
         openElement(AsciidocRenderer.QUOTE_BLOCK);
 
         if (!titleHtml.isEmpty()) {
-            openElement(AsciidocRenderer.TITLE).attr("caption", caption)
-                    .html(titleHtml);
+            openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+            attachEscaped(titleHtml);
             closeElement(AsciidocRenderer.TITLE);
         }
 
@@ -564,8 +584,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 openElement(AsciidocRenderer.LISTING_BLOCK).addClass("source");
 
                 if (!titleHtml.isEmpty()) {
-                    openElement(AsciidocRenderer.TITLE).attr("caption", caption)
-                            .html(titleHtml);
+                    openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                    attachEscaped(titleHtml);
                     closeElement(AsciidocRenderer.TITLE);
                 }
 
@@ -582,7 +602,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     "." [^\s\t\f\n.] {NoLineFeed}* {LineFeed}
     {
                 String title = trimAll(stripHead(yytext(), 1));
-                String format = getFormatted(title).body().html();
+                String format = escapeIntermediate(getFormatted(title));
                 properties.put("title:html", format);
             }
 
@@ -599,6 +619,9 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     level++;
                 }
                 String title = trimAll(skipLeft(text, "=# \t"));
+                if ( title.endsWith(" "+StringUtils.repeat(text.charAt(0),level))) {
+                    title = stripTail(title,level+1);
+                }
                 if (level > 0) {
                     closeElement(AsciidocRenderer.SECTION, level + 4);
                     closeElement(AsciidocRenderer.SECTION, level + 3);
@@ -616,12 +639,12 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     properties = props;
                 }
                 Document formattedTitle = getFormatted(title);
-                String formattedTitleString = formattedTitle.body().html();
-                String formattedReferenceString = getFormatted(properties.optString("reftext",title)).body().html();
+                String formattedTitleString = escapeIntermediate(formattedTitle);
+                String formattedReferenceString = escapeIntermediate(getFormatted(properties.optString("reftext",title)));
 
                 // Process sectnums
-                int sectNumDepth = attributes.optInt("sectnumlevels",6)+2;
-                boolean sectNums = attributes.has("sectnums") || hasClass("appendix");
+                int sectNumDepth = attributes.optInt("sectnumlevels",3)+2;
+                boolean sectNums = attributes.has("sectnums") || hasClass("appendix") || attributes.has("numbered");
                 String attribute = hasClass("appendix")?"sectnum-appx":"sectnum";
 
                 StringBuilder num = new StringBuilder();
@@ -721,7 +744,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     properties.put("%bibliography", "true");
                     openElement(AsciidocRenderer.UL).attr("level", Integer.toString(level));
                     if (!titleHtml.isEmpty()) {
-                        openElement(AsciidocRenderer.TITLE).html(titleHtml);
+                        openElement(AsciidocRenderer.TITLE);
+                        attachEscaped(titleHtml);
                         closeElement(AsciidocRenderer.TITLE);
                     }
                 }
@@ -760,7 +784,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     properties.put("%checklist", "true");
                     openElement(AsciidocRenderer.UL).attr("level", Integer.toString(level));
                     if (!titleHtml.isEmpty()) {
-                        openElement(AsciidocRenderer.TITLE).html(titleHtml);
+                        openElement(AsciidocRenderer.TITLE);
+                        attachEscaped(titleHtml);
                         closeElement(AsciidocRenderer.TITLE);
                     }
                 }
@@ -794,7 +819,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                         || !currentElement.attr("level").equals(Integer.toString(level))) {
                     openElement(AsciidocRenderer.UL).attr("level", Integer.toString(level));
                     if (!titleHtml.isEmpty()) {
-                        openElement(AsciidocRenderer.TITLE).html(titleHtml);
+                        openElement(AsciidocRenderer.TITLE);
+                        attachEscaped(titleHtml);
                         closeElement(AsciidocRenderer.TITLE);
                     }
                 }
@@ -822,7 +848,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                         || !currentElement.attr("level").equals(Integer.toString(level))) {
                     openElement(AsciidocRenderer.OL).attr("level", Integer.toString(level));
                     if (!titleHtml.isEmpty()) {
-                        openElement(AsciidocRenderer.TITLE).html(titleHtml);
+                        openElement(AsciidocRenderer.TITLE);
+                        attachEscaped(titleHtml);
                         closeElement(AsciidocRenderer.TITLE);
                     }
                 }
@@ -852,7 +879,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                         || !currentElement.attr("level").equals(Integer.toString(level))) {
                     openElement(AsciidocRenderer.DL).attr("level", Integer.toString(level));
                     if (!titleHtml.isEmpty()) {
-                        openElement(AsciidocRenderer.TITLE).html(titleHtml);
+                        openElement(AsciidocRenderer.TITLE);
+                        attachEscaped(titleHtml);
                         closeElement(AsciidocRenderer.TITLE);
                     }
                 }
@@ -879,7 +907,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 if (currentElement == null || !currentElement.tagName().equals(AsciidocRenderer.COL.tag())) {
                     openElement(AsciidocRenderer.COL);
                     if (!titleHtml.isEmpty()) {
-                        openElement(AsciidocRenderer.TITLE).html(titleHtml);
+                        openElement(AsciidocRenderer.TITLE);
+                        attachEscaped(titleHtml);
                         closeElement(AsciidocRenderer.TITLE);
                     }
                 }
@@ -956,7 +985,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 String link = properties.optString("link");
 
                 if ( !title.isEmpty() ) {
-                    titleHtml = getFormatted(title).body().html();
+                    titleHtml = escapeIntermediate(getFormatted(title));
                 }
 
                 JSONObject imageProperties = new JSONObject();
@@ -984,8 +1013,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 currentElement = root;
                 if (!titleHtml.isEmpty()) {
                     openElement(AsciidocRenderer.TITLE).attr("type", "Figure")
-                            .attr("caption", caption)
-                            .html(titleHtml);
+                            .attr("caption", caption);
+                    attachEscaped(titleHtml);
                 }
                 closeElement(AsciidocRenderer.IMAGE_BLOCK);
             }
@@ -1010,8 +1039,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
                 if (!titleHtml.isEmpty()) {
                     openElement(AsciidocRenderer.TITLE)
-                            .attr("caption", caption)
-                            .html(titleHtml);
+                            .attr("caption", caption);
+                    attachEscaped(titleHtml);
                 }
 
                 closeElement(AsciidocRenderer.VIDEO_BLOCK);
@@ -1036,8 +1065,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
                 if (!titleHtml.isEmpty()) {
                     openElement(AsciidocRenderer.TITLE)
-                            .attr("caption", caption)
-                            .html(titleHtml);
+                            .attr("caption", caption);
+                    attachEscaped(titleHtml);
                 }
 
                 closeElement(AsciidocRenderer.AUDIO_BLOCK);
@@ -1054,7 +1083,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     String subType = extractBefore(yytext(), ":").toLowerCase();
                     openElement(AsciidocRenderer.ADMONITION_BLOCK)
                         .attr("subtype", subType)
-                        .attr("text", getFormatted(attributes.optString(subType+"-caption",StringUtils.capitalize(subType))).body().html());
+                        .attr("text", escapeIntermediate(getFormatted(attributes.optString(subType+"-caption",StringUtils.capitalize(subType)))));
                     yypushback(1);
                     yybegin(BLOCK);
                 }
@@ -1062,7 +1091,16 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
     {Whitespace}+ {NoLineFeed}
     {
+                String titleHtml = properties.optString("title:html");
+
                 openElement(AsciidocRenderer.LITERAL_BLOCK);
+
+                if ( !titleHtml.isEmpty() ) {
+                    openElement(AsciidocRenderer.TITLE);
+                    attachEscaped(titleHtml);
+                    closeElement(AsciidocRenderer.TITLE);
+                }
+
                 yypushback(yytext().length());
                 yybegin(LITERAL_PARAGRAPH);
             }
@@ -1083,11 +1121,11 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     properties.getJSONObject("class").remove(admonitionType.toUpperCase());
                     openElement(AsciidocRenderer.ADMONITION_BLOCK)
                         .attr("subtype", admonitionType)
-                        .attr("text", getFormatted(attributes.optString(admonitionType+"-caption",StringUtils.capitalize(admonitionType))).body().html());
+                        .attr("text", escapeIntermediate(getFormatted(attributes.optString(admonitionType+"-caption",StringUtils.capitalize(admonitionType)))));
 
                     if (!titleHtml.isEmpty()) {
-                        openElement(AsciidocRenderer.TITLE).attr("caption", caption)
-                                .html(titleHtml);
+                        openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                        attachEscaped(titleHtml);
                         closeElement(AsciidocRenderer.TITLE);
                     }
 
@@ -1098,8 +1136,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     openElement(AsciidocRenderer.LITERAL_BLOCK);
 
                     if (!titleHtml.isEmpty()) {
-                       openElement(AsciidocRenderer.TITLE).attr("caption", caption)
-                               .html(titleHtml);
+                       openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                        attachEscaped(titleHtml);
                        closeElement(AsciidocRenderer.TITLE);
                     }
 
@@ -1109,8 +1147,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     openElement(AsciidocRenderer.LISTING_BLOCK);
 
                     if (!titleHtml.isEmpty()) {
-                        openElement(AsciidocRenderer.TITLE).attr("caption", caption)
-                                .html(titleHtml);
+                        openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                        attachEscaped(titleHtml);
                         closeElement(AsciidocRenderer.TITLE);
                     }
 
@@ -1118,8 +1156,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     yybegin(LISTING_PARAGRAPH);
                 } else if (getArgument(0).equals("quote") || getArgument(0).equals("verse")) {
                     yypushback(1);
-                    properties.put("quote:attribution", getFormatted(getArgument(1)).body().html());
-                    properties.put("quote:cite", getFormatted(getArgument(2)).body().html());
+                    properties.put("quote:attribution", escapeIntermediate(getFormatted(getArgument(1))));
+                    properties.put("quote:cite", escapeIntermediate(getFormatted(getArgument(2))));
                     boolean isVerse = getArgument(0).equals("verse");
                     if ( isVerse ) {
                         properties.put("verse%","");
@@ -1127,8 +1165,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     openElement(AsciidocRenderer.QUOTE_BLOCK);
 
                     if (!titleHtml.isEmpty()) {
-                        openElement(AsciidocRenderer.TITLE).attr("caption", caption)
-                                .html(titleHtml);
+                        openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                        attachEscaped(titleHtml);
                         closeElement(AsciidocRenderer.TITLE);
                     }
 
@@ -1147,8 +1185,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     openElement(AsciidocRenderer.PARAGRAPH_BLOCK);
 
                     if (!titleHtml.isEmpty()) {
-                        openElement(AsciidocRenderer.TITLE).attr("caption", caption)
-                                .html(titleHtml);
+                        openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                        attachEscaped(titleHtml);
                         closeElement(AsciidocRenderer.TITLE);
                     }
 

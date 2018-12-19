@@ -49,7 +49,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 %}
 
 Multiply                    = [1-9][0-9]* "*"
-Width                       = [1-9][0-9]*
+Width                       = [0-9]+
 Align                       = "."? [\^<>]
 
 %%

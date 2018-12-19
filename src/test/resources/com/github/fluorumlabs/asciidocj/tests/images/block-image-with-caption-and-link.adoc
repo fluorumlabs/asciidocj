@@ -1,0 +1,7 @@
+.Image caption with a link: https://vaadin.com
+image::sunset.jpg[]
+
+
+
+.[.small]#_Image caption with an emphasis_#
+image::sunset.jpg[]

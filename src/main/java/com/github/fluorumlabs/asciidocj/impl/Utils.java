@@ -3,6 +3,7 @@ package com.github.fluorumlabs.asciidocj.impl;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.nodes.Attribute;
+import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 
@@ -134,7 +135,7 @@ public class Utils {
     }
 
     public static String trimAll(String s) {
-        return skipLeft(skipRight(s, " \t\n"), " \t\n");
+        return skipLeft(skipRight(s, " \t\n\0"), " \t\n\0");
     }
 
     public static String trimNewLines(String s) {
@@ -263,6 +264,46 @@ public class Utils {
         }
 
         return matcher.appendTail(sb).toString();
+    }
+
+    public static String escapeIntermediate(Document document) {
+        for (Element element : document.body().getAllElements()) {
+            if ( element instanceof AsciidocElement) {
+                AsciidocElement asciidocElement = (AsciidocElement)element;
+                element.attr("properties", asciidocElement.getProperties().toString());
+                element.attr("tagName", asciidocElement.tagName().replace("__",""));
+            }
+        }
+
+        document.outputSettings().prettyPrint(false);
+
+        return document.body().html();
+    }
+
+    public static Document unescapeIntermediate(String html, JSONObject attributes) {
+        Document result = Document.createShell("");
+        result.body().append(html);
+
+        // Inception
+        for (Element element : result.body().select("[tagName]")) {
+            String tagName = element.attr("tagName");
+            JSONObject newProperties = new JSONObject(element.attr("properties"));
+            AsciidocElement newElement = new AsciidocElement(AsciidocRenderer.valueOf(tagName), newProperties, attributes);
+            element.removeAttr("properties");
+            element.removeAttr("tagName");
+            copyChildNodes(element,newElement);
+            copyAttributes(element,newElement);
+
+            element.replaceWith(newElement);
+        }
+
+        return result;
+    }
+
+    public static Element html(Element parent, String html, JSONObject attributes) {
+        Document document = unescapeIntermediate(html, attributes);
+        moveChildNodes(document.body(), parent);
+        return parent;
     }
 
 }

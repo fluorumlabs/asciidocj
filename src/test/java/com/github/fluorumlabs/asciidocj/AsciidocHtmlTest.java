@@ -45,7 +45,7 @@ public class AsciidocHtmlTest {
                     }
                     String fileName = asciidocFile.replace(".adoc", "");
                     String id = Utils.extractAfterStrict(fileName.replace('\\','/'), "tests/");
-                    if ( htmlString != null && asciidocString != null ) {
+                    if ( htmlString != null && asciidocString != null && !asciidocString.contains("include::")) {
                         dataSet.add(new Object[]{id, asciidocString, htmlString});
                     }
                 });

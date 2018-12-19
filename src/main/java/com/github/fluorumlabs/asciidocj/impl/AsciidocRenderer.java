@@ -63,15 +63,16 @@ public enum AsciidocRenderer {
         if (!x.getProperties().optString("quote:attribution").isEmpty()) {
             Element div = new Element("div").addClass("attribution");
             div.appendText("\u2014 ");
-            div.append(x.getProperties().optString("quote:attribution"));
+            html(div, x.getProperties().optString("quote:attribution"), x.getVariables());
             if (!x.getProperties().optString("quote:cite").isEmpty()) {
                 div.appendChild(new Element("br"));
-                div.appendChild(new Element("cite").html(x.getProperties().optString("quote:cite")));
+                div.appendChild(html(new Element("cite"),x.getProperties().optString("quote:cite"),x.getVariables()));
             }
             x.appendChild(div);
         }
     }),
     LITERAL_BLOCK(x -> {
+        Element title = getTitle(x);
         if (x.hasClass("listing")) {
             x.tagName("div").addClass("listingblock").removeClass("listing");
         } else {
@@ -82,6 +83,9 @@ public enum AsciidocRenderer {
         div.appendChild(pre);
 
         moveChildNodes(x, pre);
+        if ( title != null ) {
+            x.appendChild(title);
+        }
         x.appendChild(div);
     }),
     ADMONITION_BLOCK(x -> {
@@ -92,7 +96,7 @@ public enum AsciidocRenderer {
         Element tbody = new Element("tbody");
         Element tr = new Element("tr");
         Element td1 = new Element("td").addClass("icon");
-        Element div1 = new Element("div").addClass("title").html(x.attr("text"));
+        Element div1 = html(new Element("div").addClass("title"),x.attr("text"),x.getVariables());
         Element td2 = new Element("td").addClass("content");
         table.appendChild(tbody);
         tbody.appendChild(tr);
@@ -381,7 +385,7 @@ public enum AsciidocRenderer {
                 if ( id.endsWith("#") ) id = stripTail(id,1);
                 x.attr("href", id);
                 if (x.getProperties().has("to-id-contents")) {
-                    x.html(x.getProperties().getString("to-id-contents"));
+                    html(x, x.getProperties().getString("to-id-contents"), x.getVariables());
                 } else {
                     x.text("[" + id + "]");
                 }
@@ -398,7 +402,7 @@ public enum AsciidocRenderer {
                 }
                 x.attr("href", "#" + id);
                 if (x.getProperties().has("to-id-contents")) {
-                    x.html(x.getProperties().getString("to-id-contents"));
+                    html(x,x.getProperties().getString("to-id-contents"),x.getVariables());
                 } else {
                     String idText = x.getVariables().optString("anchor:" + id, "");
 
@@ -413,7 +417,7 @@ public enum AsciidocRenderer {
                         idText = "[" + id + "]";
                     }
 
-                    x.html(idText);
+                    html(x,idText,x.getVariables());
                 }
             }
             if (x.getVariables().optString("xrefstyle").equals("full") && x.getVariables().has("sectnum:" + id)) {
@@ -642,7 +646,7 @@ public enum AsciidocRenderer {
         }
         String[] keys = contents.split(">");
         if (keys.length == 1) {
-            x.tagName("b").addClass("menu");
+            x.tagName("b").addClass("menuref");
             x.text(trim(keys[0]));
         } else {
             x.tagName("span").addClass("menuseq");
@@ -668,6 +672,20 @@ public enum AsciidocRenderer {
     BUTTON(x -> {
         x.tagName("b").addClass("button").text(x.getProperties().optString("button", ""));
     }),
+    FOOTNOTE(x -> {
+        x.tagName("sup");
+        String idx = x.attr("index");
+        x.appendText("[");
+
+        Element a = new Element("a").addClass("footnote")
+                .attr("href",String.format("#_footnotedef_%s", idx))
+                .attr("id",String.format("_footnoteref_%s", idx))
+                .attr("title","View footnote.")
+                .text(idx);
+        x.appendChild(a);
+        x.appendText("]");
+        x.removeAttr("index");
+    }),
     SPAN(x -> {
         if ( x.classNames().isEmpty() ) {
             moveChildNodesToParent(x);
@@ -675,6 +693,10 @@ public enum AsciidocRenderer {
         } else {
             x.tagName("span");
         }
+    }),
+    ICON(x -> {
+        x.tagName("i").addClass("fa").addClass("fa-"+x.attr("icon"));
+        x.removeAttr("icon");
     }),
     TABLE_CELL(Node::remove), // Cell contents is handled by TABLE_BLOCK
     TABLE_BLOCK(x -> {
@@ -806,29 +828,31 @@ public enum AsciidocRenderer {
                     for (Element element : content) {
                         Element p = new Element("p").addClass("tableblock");
                         Element target = p;
-                        if ( cellFormat.optBoolean("verse")) {
-                            target.tagName("div").addClass("verse").removeClass("tableblock");
-                        }
-                        if ( cellFormat.optBoolean("literal")) {
-                            target.tagName("div").addClass("literal").removeClass("tableblock");
-                            Element n = new Element("pre");
-                            target.appendChild(n);
-                            target = n;
-                        }
-                        if ( cellFormat.optBoolean("em")) {
-                            Element n = new Element("em");
-                            target.appendChild(n);
-                            target = n;
-                        }
-                        if ( cellFormat.optBoolean("monospace")) {
-                            Element n = new Element("code");
-                            target.appendChild(n);
-                            target = n;
-                        }
-                        if ( cellFormat.optBoolean("strong")) {
-                            Element n = new Element("strong");
-                            target.appendChild(n);
-                            target = n;
+                        if ( !cellFormat.optBoolean("default")) {
+                            if (cellFormat.optBoolean("verse")) {
+                                target.tagName("div").addClass("verse").removeClass("tableblock");
+                            }
+                            if (cellFormat.optBoolean("literal")) {
+                                target.tagName("div").addClass("literal").removeClass("tableblock");
+                                Element n = new Element("pre");
+                                target.appendChild(n);
+                                target = n;
+                            }
+                            if (cellFormat.optBoolean("em")) {
+                                Element n = new Element("em");
+                                target.appendChild(n);
+                                target = n;
+                            }
+                            if (cellFormat.optBoolean("monospace")) {
+                                Element n = new Element("code");
+                                target.appendChild(n);
+                                target = n;
+                            }
+                            if (cellFormat.optBoolean("strong")) {
+                                Element n = new Element("strong");
+                                target.appendChild(n);
+                                target = n;
+                            }
                         }
                         moveChildNodes(element, target);
                         if (target != p ) {
@@ -900,7 +924,7 @@ public enum AsciidocRenderer {
     }
 
     public static String slugify(String s) {
-        return slugify.slugify(s).replace("-", "_");
+        return slugify.slugify(s.replaceAll("[\0\ufffd]","")).replace("-", "_");
     }
 
 }

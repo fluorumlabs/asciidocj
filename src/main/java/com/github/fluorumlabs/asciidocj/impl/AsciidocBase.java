@@ -9,6 +9,8 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.parser.Tag;
 import org.jsoup.select.Elements;
+import org.jsoup.select.NodeTraversor;
+import org.jsoup.select.NodeVisitor;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -87,6 +89,21 @@ public abstract class AsciidocBase {
         }
     }
 
+    protected String getArguments(JSONObject properties) {
+        if (!properties.has("arguments")) {
+            return "";
+        } else {
+            JSONArray arguments = properties.getJSONArray("arguments");
+            List<String> results = new ArrayList<>();
+            for (Object argument : arguments) {
+                if ( argument instanceof String ) {
+                    results.add((String)argument);
+                }
+            }
+            return String.join(", ",results);
+        }
+    }
+
     protected boolean hasOption(String key) {
         return hasOption(key, properties);
     }
@@ -100,11 +117,7 @@ public abstract class AsciidocBase {
     }
 
     protected void appendText(String string) {
-        if (string.endsWith("\0")) {
-            textBuilder.append(stripTail(string, 1));
-        } else {
-            textBuilder.append(string);
-        }
+        textBuilder.append(string.replace("\0",""));
     }
 
     protected void clearText() {
@@ -350,40 +363,19 @@ public abstract class AsciidocBase {
         return parents;
     }
 
+
+    protected void attachEscaped(String html) {
+        appendDocument(unescapeIntermediate(html, attributes));
+    }
+
+
     protected Document upgradeToHtml(Document document) {
-        for (Element element : document.body().getAllElements()) {
-            if ( element instanceof AsciidocElement) {
-                AsciidocElement asciidocElement = (AsciidocElement)element;
-                element.attr("properties", asciidocElement.getProperties().toString());
-                element.attr("tagName", asciidocElement.tagName().replace("__",""));
-                element.tagName("xxx");
-            }
-        }
-
-        document.outputSettings().prettyPrint(false);
-
-        String html = document.body().html()
+        String html = escapeIntermediate(document)
                 .replace("&lt;","<")
                 .replace("&gt;", ">")
                 .replace("&amp;", "&");
 
-        Document result = Document.createShell("");
-        result.body().append(html);
-
-        // Inception
-        for (Element element : result.body().select("xxx")) {
-            String tagName = element.attr("tagName");
-            JSONObject newProperties = new JSONObject(element.attr("properties"));
-            AsciidocElement newElement = new AsciidocElement(AsciidocRenderer.valueOf(tagName), newProperties, attributes);
-            element.removeAttr("properties");
-            element.removeAttr("tagName");
-            copyChildNodes(element,newElement);
-            copyAttributes(element,newElement);
-
-            element.replaceWith(newElement);
-        }
-
-        return result;
+        return unescapeIntermediate(html, attributes);
     }
 
     /* The working horse */
@@ -399,9 +391,23 @@ public abstract class AsciidocBase {
             if (x instanceof AsciidocElement) {
                 AsciidocElement xx = (AsciidocElement) x;
                 xx.process();
+                xx.attr("processed",true);
+            }
+        }
+        // second pass for unescaped things added during first pass
+        allElements = document.getAllElements();
+        for (Element x : allElements) {
+            if (x instanceof AsciidocElement) {
+                if ( x.hasAttr("processed")) {
+                    x.removeAttr("processed");
+                } else {
+                    AsciidocElement xx = (AsciidocElement) x;
+                    xx.process();
+                }
             }
         }
         document.select("[properties]").removeAttr("properties");
+        document.select("[tagName]").removeAttr("tagName");
         document.select("mark[class], mark[id]").tagName("span");
 
         // Preamble postprocessing
@@ -446,6 +452,7 @@ public abstract class AsciidocBase {
             Element li = new Element("li");
             Element a = new Element("a").attr("href","#"+header.attr("id"));
             a.append(header.html());
+            a.select("a.anchor").remove();
             li.appendChild(a);
             currentList.appendChild(li);
             currentList = li;
@@ -453,7 +460,10 @@ public abstract class AsciidocBase {
 
         if ( toc.parent() == null && attributes.has("toc")) {
             Element firstHeader = document.select("h1").first();
-            if (firstHeader != null) {
+            Element preamble = document.select("div#preamble").first();
+            if (preamble != null && attributes.getString("toc").equals("preamble")) {
+                preamble.appendChild(toc);
+            } else if (firstHeader != null) {
                 firstHeader.after(toc);
             } else {
                 document.body().prependChild(toc);
@@ -467,6 +477,34 @@ public abstract class AsciidocBase {
         }
         if ( emptyToc && toc.parent() != null) {
             toc.remove();
+        }
+
+        // Add footnotes
+        int footnoteCount = attributes.optInt("footnote:counter",0);
+        if ( footnoteCount > 0 ) {
+            Element footnotes = new Element("div").attr("id", "footnotes");
+            footnotes.appendChild(new Element("hr"));
+            for ( int i = 1; i < footnoteCount; i++ ) {
+                Element div = new Element("div").addClass("footnote").attr("id", String.format("_footnotedef_%d",i));
+                Element a = new Element("a").attr("href", String.format("#_footnoteref_%d",i)).text(Integer.toString(i));
+                div.appendChild(a);
+                div.appendText(". ");
+                div.append(attributes.getString(String.format("footnote:%d",i)));
+                footnotes.appendChild(div);
+            }
+            document.body().appendChild(footnotes);
+        }
+
+        // Clean duplicate ids
+        Set<String> ids = document.select("[id]").stream().map(e -> e.attr("id")).collect(Collectors.toSet());
+
+        for (String id : ids) {
+            Elements sameId = document.getElementsByAttributeValue("id",id);
+            if ( sameId.size() > 1 ) {
+                for ( int i = 1; i < sameId.size(); i++) {
+                    sameId.get(i).removeAttr("id");
+                }
+            }
         }
     }
 
@@ -500,10 +538,6 @@ public abstract class AsciidocBase {
                         delimitation = newDelimitation;
                     } else {
                         delimitation = 0;
-                        if (currentLine.startsWith("//")) {
-                            lines.remove(i);
-                            continue;
-                        }
                         if (nextLine.length() > 0
                                 && StringUtils.isAlphanumeric(currentLine.substring(0, 1))) {
                             char marker = nextLine.charAt(0);

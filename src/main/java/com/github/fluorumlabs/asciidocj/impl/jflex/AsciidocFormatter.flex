@@ -281,12 +281,15 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 
 LineFeed                    = \R | \0
 Whitespace					= " "|"\t"
-NoWhitespace			    = [^\s]
+NoWhitespace			    = [^\s\0\f\t]
 
 EmailAddress                = [a-zA-Z0-9.!#$%&'*+/=?\^_`{|}~\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,128}
 URLDomainPart               = "www."? [-a-zA-Z0-9@:%._\+~#=]{2,256} "." [a-z]{2,128}
-URLDomainPartWithLocalhost  = {URLDomainPart} | "localhost"
-URL                         = (("http" [s]?)|"irc") "://" {URLDomainPartWithLocalhost} [-a-zA-Z0-9@:%_\+.,~#?!&//=()*]*
+URLHost                     = [0-9]{1,3} "." [0-9]{1,3} "." [0-9]{1,3} "." [0-9]{1,3}
+URLDomainPartWithLocalhost  = {URLDomainPart} | "localhost" | {URLHost}
+URLPort                     = ":" [1-9][0-9]{0,4}
+
+URL                         = (("http" [s]?)|"irc") "://" {URLDomainPartWithLocalhost} {URLPort}? [-a-zA-Z0-9@:%_\+.,~#?!&//=()*]*
 
 NoLineFeed                  = [^\r\n\u2028\u2029\u000B\u000C\u0085\0]
 
@@ -328,7 +331,7 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
 }
 
 <YYINITIAL> {
-    "*" [^\s*/] [^]*
+    "*" [^\s*] [^]*
     {
                 if ( fallback(Pass.QUOTES) ) break;
 
@@ -400,7 +403,7 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
 
     "`" [^\s`\"\'] [^]* |
     "`\"" ~ "\"`" |
-    "`'" ~ "\`"
+    "`'" ~ "'`"
     {
                 if ( fallback(Pass.QUOTES) ) break;
 
@@ -448,19 +451,62 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 PropertiesParser.parse(extractBetween(yytext(), "[", "]"), anchorOptions, false);
                 text = getArgument(anchorOptions, 0);
                 if (!text.isEmpty()) {
-                    attributes.put("anchor:" + id, getFormatted(text).body().html());
+                    attributes.put("anchor:" + id, escapeIntermediate(getFormatted(text)));
                 }
                 openElement(AsciidocRenderer.LINK).attr("id", id);
                 closeElement(AsciidocRenderer.LINK);
                 yybegin(YYINITIAL);
             }
 
-    "(((" ~ ")))"
+    "footnote:[" ~ "]"
     {
-        // Index does not work in HTML
         if ( fallback(Pass.MACROS) ) break;
-    }
 
+        int idx = attributes.optInt("footnote:counter",1);
+        String text = extractAfter(stripTail(yytext(),1),"footnote:[");
+
+        attributes.put(String.format("footnote:%d", idx), escapeIntermediate(getFormatted(text)));
+        openElement(AsciidocRenderer.FOOTNOTE);
+        currentElement.addClass("footnote").attr("index",Integer.toString(idx));
+        closeElement(AsciidocRenderer.FOOTNOTE);
+
+        attributes.put("footnote:counter", idx+1);
+      }
+
+    "footnoteref:[" ~ "]"
+    {
+        if ( fallback(Pass.MACROS) ) break;
+
+        int idx = attributes.optInt("footnote:counter",1);
+        String raw = extractAfter(stripTail(yytext(),1),"footnoteref:[");
+        String[] parts = raw.split(",",2);
+        String text = "";
+        if ( parts.length > 1 ) {
+            text = parts[1];
+        }
+        String id = parts[0];
+
+        if ( !text.isEmpty() ) {
+            attributes.put(String.format("footnote-ref:%s", id), idx);
+            attributes.put(String.format("footnote:%d", idx), escapeIntermediate(getFormatted(text)));
+            openElement(AsciidocRenderer.FOOTNOTE);
+            currentElement.addClass("footnote").attr("id",String.format("_footnote_%s",id));
+            currentElement.attr("index",Integer.toString(idx));
+            closeElement(AsciidocRenderer.FOOTNOTE);
+
+            attributes.put("footnote:counter", idx+1);
+        } else {
+            idx = attributes.optInt(String.format("footnote-ref:%s", id),0);
+            if ( idx > 0 ) {
+                openElement(AsciidocRenderer.FOOTNOTE);
+                currentElement.addClass("footnoteref").attr("index",Integer.toString(idx));
+                closeElement(AsciidocRenderer.FOOTNOTE);
+            } else {
+                appendText(yytext().substring(0,1));
+                yypushback(yytext().length()-1);
+            }
+        }
+      }
 
     "xref:" [^\s\[]+ {Properties}? |
     "<<" ~ ">>"
@@ -498,50 +544,12 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
 
                 properties.put("to-id", id);
                 if (!text.isEmpty()) {
-                    properties.put("to-id-contents", getFormatted(text).body().html());
+                    properties.put("to-id-contents", escapeIntermediate(getFormatted(text)));
                 }
                 openElement(AsciidocRenderer.LINK);
                 closeElement(AsciidocRenderer.LINK);
                 yybegin(YYINITIAL);
             }
-
-
-    "xref:" [^\s\[]+ {Properties}?
-    {
-                if ( fallback(Pass.MACROS) ) break;
-
-                String content = yytext();
-                if (content.startsWith("link:")) {
-                    content = stripHead(content, 5);
-                }
-                String href = extractBefore(content, "[");
-                String text = extractBetween(content, "[", "]");
-
-                if (text.isEmpty() && (href.endsWith("!") || href.endsWith(",") || href.endsWith(")") || href.endsWith(".") || href.endsWith(":") || href.endsWith("~"))) {
-                    href = stripTail(href, 1);
-                    yypushback(1);
-                }
-
-                PropertiesParser.parse(text, properties, false);
-                String title = getArgument(0);
-                if (title.endsWith("^")) {
-                    title = stripTail(title, 1);
-                    properties.put("window", "_blank");
-                }
-                openElement(AsciidocRenderer.LINK).attr("href", href);
-                if (!title.isEmpty()) {
-                    appendFormatted(title);
-                } else {
-                    if ( attributes.has("hide-uri-scheme") && href.contains("://")) {
-                        href = extractAfter(href,"://");
-                    }
-                    currentElement.text(href);
-                    currentElement.addClass("bare");
-                }
-                closeElement();
-                yybegin(YYINITIAL);
-            }
-
 
     /* Inline blocks */
     "link:++" {NoLineFeed}* "++" {Properties}?
@@ -552,7 +560,7 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 String text = extractBetween(extractAfterStrict(content, "++"), "[", "]");
                 String href = extractBetween(content, "++", "++");
                 PropertiesParser.parse(text, properties, false);
-                String title = getArgument(0);
+                String title = getArguments(properties);
                 if (title.endsWith("^")) {
                     title = stripTail(title, 1);
                     properties.put("window", "_blank");
@@ -571,7 +579,7 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 yybegin(YYINITIAL);
             }
 
-    "link:" [^\s\[<]+ {Properties}? |
+    "link:" [^\s\f\t\[<\0]+ {Properties}? |
     {URL} {Properties}?
     {
                 if ( fallback(Pass.MACROS) ) break;
@@ -583,14 +591,21 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 String href = extractBefore(content, "[");
                 String text = extractBetween(content, "[", "]");
 
-                if (text.isEmpty() && (href.endsWith("!") || href.endsWith(",") || href.endsWith(".") || href.endsWith(":") || href.endsWith("~") ||
-                    (href.endsWith(")") && !href.contains("(")))) {
-                    href = stripTail(href, 1);
-                    yypushback(1);
+                if (text.isEmpty() ) {
+                    boolean skipped;
+                    do {
+                        skipped = false;
+                        if ((href.endsWith("!") || href.endsWith(",") || href.endsWith(".") || href.endsWith(":") || href.endsWith("~") ||
+                            (href.endsWith(")") && !href.contains("(")))) {
+                            href = stripTail(href, 1);
+                            yypushback(1);
+                            skipped = true;
+                        }
+                    } while ( skipped );
                 }
 
                 PropertiesParser.parse(text, properties, false);
-                String title = getArgument(0);
+                String title = getArguments(properties);
                 if (title.endsWith("^")) {
                     title = stripTail(title, 1);
                     properties.put("window", "_blank");
@@ -609,7 +624,7 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 yybegin(YYINITIAL);
             }
 
-    "mailto:" [^\s\f\t\[\0]+ {Properties}? |
+    "mailto:" [^\s\f\t\[<\0]+ {Properties}? |
     {EmailAddress} {Properties}?
     {
                 if ( fallback(Pass.MACROS) ) break;
@@ -621,7 +636,7 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 String href = extractBefore(content, "[");
                 String text = extractBetween(content, "[", "]");
                 PropertiesParser.parse(text, properties, false);
-                String title = getArgument(0);
+                String title = getArguments(properties);
 
                 if (!getArgument(1).isEmpty()) {
                     StringBuilder hrefSb = new StringBuilder();
@@ -687,6 +702,21 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 yybegin(YYINITIAL);
             }
 
+    "icon:" {NoWhitespace}+ {Properties}?
+    {
+                if ( fallback(Pass.MACROS) ) break;
+
+                String icon = extractBetween(yytext(), "icon:", "[");
+
+                PropertiesParser.parse(extractBetween(yytext(), "[", "]"), properties, false);
+
+                openElement("span").addClass("icon");
+
+                openElement(AsciidocRenderer.ICON).attr("icon", icon);
+                closeElement("span");
+                yybegin(YYINITIAL);
+            }
+
     "kbd:" {Properties}
     {
                 if ( fallback(Pass.MACROS) ) break;
@@ -696,7 +726,7 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 closeElement(AsciidocRenderer.KEYBOARD);
             }
 
-    "menu:" [^\R\[]+ {Properties} |
+    "menu:" [^\R\[\0]+ {Properties} |
     "\"" [^\"><]+ (">" [^\"><]+)+ "\""
     {
                 if ( fallback(Pass.MACROS) ) break;
@@ -721,6 +751,29 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 openElement(AsciidocRenderer.BUTTON);
                 closeElement(AsciidocRenderer.BUTTON);
             }
+
+    "indexterm:" {Properties}
+    {
+                if ( fallback(Pass.MACROS) ) break;
+
+                // does nothing in HTML mode
+            }
+
+    "(((" ~ ")))"
+    {
+        // Index does not work in HTML
+        if ( fallback(Pass.MACROS) ) break;
+    }
+
+
+    "((" ~ "))"
+    {
+                if ( fallback(Pass.MACROS) ) break;
+
+                // does nothing in HTML mode
+              appendTextNode();
+            appendFormatted(extractBetween(yytext(),"((","))"));
+      }
 
     {LineFeed} "ifdef::" {AttributeName} "[" [^\]]+ "]" {Whitespace}* {LineFeed} |
     {LineFeed} "ifdef::" {AttributeName} "[]" {Whitespace}* {LineFeed} ~ "endif::" {NoLineFeed}* {LineFeed}
@@ -873,7 +926,7 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 if ( data.length>1 ) text = data[1];
 
                 if (!text.isEmpty()) {
-                    attributes.put("anchor:" + id, getFormatted(text).body().html());
+                    attributes.put("anchor:" + id, escapeIntermediate(getFormatted(text)));
                 }
                 openElement(AsciidocRenderer.LINK).attr("id", id);
                 closeElement(AsciidocRenderer.LINK);
@@ -935,6 +988,13 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 appendText(trim(yytext(), "+"));
                 closeElement(AsciidocRenderer.SPAN);
             }
+
+    "$$" . ~ "$$"
+    {
+                if ( fallback(Pass.QUOTES) ) break;
+
+                appendText(trim(yytext(), "$"));
+            }
     /*"__" | "_"
     {
         openOrCloseElement("em");
@@ -958,7 +1018,8 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 }
             }
 
-    "^" . ~ "^"
+    "^" [\S] [^\^\n]* [\S] "^" |
+    "^" [\S] "^"
     {
                 if ( fallback(Pass.QUOTES) ) break;
 
@@ -967,7 +1028,8 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 closeElement("sup");
             }
 
-    "~" . ~ "~"
+    "~" [\S] [^~\n]* [\S] "~" |
+    "~" [\S] "~"
     {
                 if ( fallback(Pass.QUOTES) ) break;
 
@@ -986,6 +1048,16 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
             }
 
     /* Smart quotes */
+    "\"`" ~ "`\""
+    {
+        if ( fallback(Pass.REPLACEMENTS) ) break;
+        appendText("\u201c");
+        appendTextNode();
+        appendFormatted(strip(yytext(),2,2));
+        appendText("\u201d");
+        yybegin(INSIDE_WORD);
+      }
+
     "\"`"
     {
                 if ( fallback(Pass.REPLACEMENTS) ) break;
@@ -1000,6 +1072,16 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 appendText("\u201d");
                 yybegin(INSIDE_WORD);
             }
+
+    "'`" ~ "`'"
+    {
+        if ( fallback(Pass.REPLACEMENTS) ) break;
+        appendText("\u2018");
+        appendTextNode();
+        appendFormatted(strip(yytext(),2,2));
+        appendText("\u2019");
+        yybegin(INSIDE_WORD);
+      }
 
     "'`"
     {
