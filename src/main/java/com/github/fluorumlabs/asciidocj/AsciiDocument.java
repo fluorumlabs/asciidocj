@@ -65,6 +65,7 @@ public class AsciiDocument {
     }
 
     public JSONObject getAttributesAsJSON(JSONObject json) {
+        parseAndGetDocument();
         attributes.keySet().forEach(k -> {
             if (!k.contains(":") && !k.contains("%")) json.put(k, attributes.get(k));
         });
@@ -76,6 +77,7 @@ public class AsciiDocument {
     }
 
     public Properties getAttributesAsProperties(Properties properties) {
+        parseAndGetDocument();
         attributes.keySet().forEach(k -> {
             if (!k.contains(":") && !k.contains("%")) properties.put(k, attributes.get(k));
         });
