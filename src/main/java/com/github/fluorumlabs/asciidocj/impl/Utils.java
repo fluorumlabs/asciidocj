@@ -7,7 +7,6 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 
-import java.io.File;
 import java.io.Reader;
 import java.io.StringReader;
 import java.net.URI;
@@ -241,7 +240,7 @@ public class Utils {
 
     public static Element getTitle(Element x) {
         for (Element child : x.children()) {
-            if ( child.tagName().equals(AsciidocRenderer.TITLE.tag()) ) return child;
+            if (child.tagName().equals(AsciidocRenderer.TITLE.tag())) return child;
         }
         return null;
     }
@@ -250,15 +249,15 @@ public class Utils {
         Matcher matcher = pattern.matcher(input);
         StringBuffer sb = new StringBuffer();
 
-        while(matcher.find()) {
+        while (matcher.find()) {
             int groupCount = matcher.groupCount() + 1;
             String[] groups = new String[groupCount];
 
-            for(int i = 0; i < groupCount; ++i) {
+            for (int i = 0; i < groupCount; ++i) {
                 groups[i] = matcher.group(i);
             }
 
-            String result = (String)replacement.apply(groups);
+            String result = (String) replacement.apply(groups);
             if (result != null) {
                 matcher.appendReplacement(sb, Matcher.quoteReplacement(result));
             }
@@ -269,10 +268,10 @@ public class Utils {
 
     public static String escapeIntermediate(Document document) {
         for (Element element : document.body().getAllElements()) {
-            if ( element instanceof AsciidocElement) {
-                AsciidocElement asciidocElement = (AsciidocElement)element;
+            if (element instanceof AsciidocElement) {
+                AsciidocElement asciidocElement = (AsciidocElement) element;
                 element.attr("properties", asciidocElement.getProperties().toString());
-                element.attr("tagName", asciidocElement.tagName().replace("__",""));
+                element.attr("tagName", asciidocElement.tagName().replace("__", ""));
             }
         }
 
@@ -292,8 +291,8 @@ public class Utils {
             AsciidocElement newElement = new AsciidocElement(AsciidocRenderer.valueOf(tagName), newProperties, attributes);
             element.removeAttr("properties");
             element.removeAttr("tagName");
-            copyChildNodes(element,newElement);
-            copyAttributes(element,newElement);
+            copyChildNodes(element, newElement);
+            copyAttributes(element, newElement);
 
             element.replaceWith(newElement);
         }
@@ -309,11 +308,11 @@ public class Utils {
 
     public static String trimLeftLines(String text) {
         String[] lines = text.split("\n");
-        int ident = Stream.of(lines).mapToInt(line -> unskipLeft(line," \t").length()).min().orElse(0);
-        for ( int i = 0; i < lines.length; i++ ) {
-            lines[i] = stripHead(lines[i],ident);
+        int ident = Stream.of(lines).mapToInt(line -> unskipLeft(line, " \t").length()).min().orElse(0);
+        for (int i = 0; i < lines.length; i++) {
+            lines[i] = stripHead(lines[i], ident);
         }
-        return String.join("\n",lines);
+        return String.join("\n", lines);
     }
 
 }

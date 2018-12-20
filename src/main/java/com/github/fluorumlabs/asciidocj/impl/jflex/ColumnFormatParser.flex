@@ -7,7 +7,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.io.StringReader;
 
-import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
+import static com.github.fluorumlabs.asciidocj.impl.Utils.stripTail;
 
 /**
  * Parser for Asciidoc properties
@@ -25,27 +25,27 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
     private JSONArray columns = new JSONArray();
     private JSONObject column;
 
-        // We don't need that :)
-        protected static class Yytoken {
-        }
+    // We don't need that :)
+    protected static class Yytoken {
+    }
 
-        /**
-        * Parse the PlainText and return a resulting Document
-        *
-        * @param text Properties block
-        * @return Properties JSONObject
-        */
-        public static JSONArray parse(String text) {
-            try(StringReader reader = new StringReader(text)) {
-                ColumnFormatParser parser = new ColumnFormatParser(reader);
-                parser.column = new JSONObject();
-                parser.columns.put(parser.column);
-                parser.parseInput();
-                return parser.columns;
-            } catch (IOException|ParserException e) {
-                throw new RuntimeException(e);
-            }
+    /**
+     * Parse the PlainText and return a resulting Document
+     *
+     * @param text Properties block
+     * @return Properties JSONObject
+     */
+    public static JSONArray parse(String text) {
+        try (StringReader reader = new StringReader(text)) {
+            ColumnFormatParser parser = new ColumnFormatParser(reader);
+            parser.column = new JSONObject();
+            parser.columns.put(parser.column);
+            parser.parseInput();
+            return parser.columns;
+        } catch (IOException | ParserException e) {
+            throw new RuntimeException(e);
         }
+    }
 %}
 
 Multiply                    = [1-9][0-9]* "*"
@@ -56,71 +56,72 @@ Align                       = "."? [\^<>]
 
 <YYINITIAL> {
     "," {
-        column = new JSONObject();
-        columns.put(column);
-      }
+                column = new JSONObject();
+                columns.put(column);
+            }
 
     {Multiply} {
-        int count = Integer.parseInt(stripTail(yytext(),1));
-        for ( int i = 1; i < count; i++ ) {
-            // Add current column count-1 times (same object == same values)
-            columns.put(column);
-        }
-      }
+                int count = Integer.parseInt(stripTail(yytext(), 1));
+                for (int i = 1; i < count; i++) {
+                    // Add current column count-1 times (same object == same values)
+                    columns.put(column);
+                }
+            }
 
     {Width} {
-          column.put("width", Integer.parseInt(yytext()));
-      }
+                column.put("width", Integer.parseInt(yytext()));
+            }
 
     "~" {
-          column.put("autowidth", true);
-      }
+                column.put("autowidth", true);
+            }
 
     {Align} {
-          boolean isVertical = yytext().startsWith(".");
-          String attr = isVertical?"valign":"halign";
-          switch (yytext().charAt(yytext().length()-1)) {
-              case '^':
-                  column.put(attr,isVertical?"middle":"center");
-                  break;
-              case '<':
-                  column.put(attr,isVertical?"top":"left");
-                  break;
-              case '>':
-                  column.put(attr,isVertical?"bottom":"right");
-                  break;
-          }
-      }
+                boolean isVertical = yytext().startsWith(".");
+                String attr = isVertical ? "valign" : "halign";
+                switch (yytext().charAt(yytext().length() - 1)) {
+                    case '^':
+                        column.put(attr, isVertical ? "middle" : "center");
+                        break;
+                    case '<':
+                        column.put(attr, isVertical ? "top" : "left");
+                        break;
+                    case '>':
+                        column.put(attr, isVertical ? "bottom" : "right");
+                        break;
+                }
+            }
 
     "a" {
-          column.put("asciidoc",true);
-      }
+                column.put("asciidoc", true);
+            }
 
     "e" {
-          column.put("em",true);
-      }
+                column.put("em", true);
+            }
 
     "h" {
-          column.put("header",true);
-      }
+                column.put("header", true);
+            }
 
     "l" {
-          column.put("literal",true);
-      }
+                column.put("literal", true);
+            }
 
     "m" {
-          column.put("monospace",true);
-      }
+                column.put("monospace", true);
+            }
 
     "s" {
-          column.put("strong",true);
-      }
+                column.put("strong", true);
+            }
 
     "v" {
-          column.put("verse",true);
-      }
+                column.put("verse", true);
+            }
 
 	/* Any other character */
 	[^]
-    { }
+    {
+            }
 }

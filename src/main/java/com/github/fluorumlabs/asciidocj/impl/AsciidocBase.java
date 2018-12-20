@@ -9,13 +9,10 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.parser.Tag;
 import org.jsoup.select.Elements;
-import org.jsoup.select.NodeTraversor;
-import org.jsoup.select.NodeVisitor;
 
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 
@@ -47,8 +44,10 @@ public abstract class AsciidocBase {
             }
             if (properties.has("id")) {
                 element.attr("id", properties.getString("id"));
-                if ( properties.has("title:html") ) attributes.put("anchor:"+properties.getString("id"), properties.get("title:html"));
-                if ( properties.has("reftext") ) attributes.put("anchor:"+properties.getString("id"), properties.get("reftext"));
+                if (properties.has("title:html"))
+                    attributes.put("anchor:" + properties.getString("id"), properties.get("title:html"));
+                if (properties.has("reftext"))
+                    attributes.put("anchor:" + properties.getString("id"), properties.get("reftext"));
             }
         }
         currentProperties = properties;
@@ -56,20 +55,20 @@ public abstract class AsciidocBase {
     }
 
     protected void promoteArgumentsToClasses() {
-    if (properties.has("arguments") && properties.getJSONArray("arguments").length()==1) {
-        if ( !properties.has("class") ) {
-            properties.put("class", new JSONObject());
-        }
-        JSONObject classes = properties.getJSONObject("class");
+        if (properties.has("arguments") && properties.getJSONArray("arguments").length() == 1) {
+            if (!properties.has("class")) {
+                properties.put("class", new JSONObject());
+            }
+            JSONObject classes = properties.getJSONObject("class");
 
-        for (String aClass : properties.getJSONArray("arguments").getString(0).split(" ")) {
-            classes.put(aClass,"");
+            for (String aClass : properties.getJSONArray("arguments").getString(0).split(" ")) {
+                classes.put(aClass, "");
+            }
         }
-    }
     }
 
     protected String getArgument(int i) {
-        return getArgument(properties,i);
+        return getArgument(properties, i);
     }
 
     protected boolean hasClass(String x) {
@@ -96,11 +95,11 @@ public abstract class AsciidocBase {
             JSONArray arguments = properties.getJSONArray("arguments");
             List<String> results = new ArrayList<>();
             for (Object argument : arguments) {
-                if ( argument instanceof String ) {
-                    results.add((String)argument);
+                if (argument instanceof String) {
+                    results.add((String) argument);
                 }
             }
-            return String.join(", ",results);
+            return String.join(", ", results);
         }
     }
 
@@ -117,7 +116,7 @@ public abstract class AsciidocBase {
     }
 
     protected void appendText(String string) {
-        textBuilder.append(string.replace("\0",""));
+        textBuilder.append(string.replace("\0", ""));
     }
 
     protected void clearText() {
@@ -221,7 +220,7 @@ public abstract class AsciidocBase {
         Set<String> tags = Arrays.stream(tag)
                 .map(AsciidocRenderer::tag)
                 .collect(Collectors.toSet());
-        if ( tags.contains(currentElement.tagName())) {
+        if (tags.contains(currentElement.tagName())) {
             return currentElement;
         }
         getParents(currentElement).stream()
@@ -237,13 +236,13 @@ public abstract class AsciidocBase {
         Set<String> tags = Arrays.stream(tag)
                 .map(AsciidocRenderer::tag)
                 .collect(Collectors.toSet());
-        if ( lastBlockParent != null ) {
+        if (lastBlockParent != null) {
             currentElement = lastBlockParent;
         }
         if (position == null) {
             position = currentElement;
         }
-        if ( tags.contains(position.tagName())) {
+        if (tags.contains(position.tagName())) {
             currentElement = position;
         } else {
             getParents(position).stream()
@@ -296,7 +295,7 @@ public abstract class AsciidocBase {
     protected Element closeToElement(Element position, AsciidocRenderer tag, int level) {
         appendTextNode();
         String value = Integer.toString(level);
-        if ( lastBlockParent != null && position == null ) {
+        if (lastBlockParent != null && position == null) {
             position = lastBlockParent;
         }
         if (position == null) {
@@ -308,13 +307,13 @@ public abstract class AsciidocBase {
                 .findFirst()
                 .ifPresent(e -> currentElement = e);
 
-        if ( currentElement == null ) currentElement = position;
+        if (currentElement == null) currentElement = position;
         return currentElement;
     }
 
     protected boolean isTerminal(Element x) {
         boolean isTerminal = true;
-        while ( x != null) {
+        while (x != null) {
             isTerminal = isTerminal && (x.nextElementSibling() == null);
             x = x.parent();
         }
@@ -328,7 +327,7 @@ public abstract class AsciidocBase {
                 .findFirst()
                 .ifPresent(e -> lastBlockParent = e.parent());
 
-        if ( isInside(AsciidocRenderer.SECTION) ) {
+        if (isInside(AsciidocRenderer.SECTION)) {
             closeToElement(AsciidocRenderer.SECTION);
         } else {
             currentElement = document.body();
@@ -371,7 +370,7 @@ public abstract class AsciidocBase {
 
     protected Document upgradeToHtml(Document document) {
         String html = escapeIntermediate(document)
-                .replace("&lt;","<")
+                .replace("&lt;", "<")
                 .replace("&gt;", ">")
                 .replace("&amp;", "&");
 
@@ -382,7 +381,7 @@ public abstract class AsciidocBase {
     protected void enrich() {
         // Autoplacement of TOC
         Element toc = document.select(AsciidocRenderer.TOC.tag()).first();
-        if ( toc == null ) {
+        if (toc == null) {
             toc = new AsciidocElement(AsciidocRenderer.TOC, new JSONObject(), attributes);
         }
 
@@ -391,14 +390,14 @@ public abstract class AsciidocBase {
             if (x instanceof AsciidocElement) {
                 AsciidocElement xx = (AsciidocElement) x;
                 xx.process();
-                xx.attr("processed",true);
+                xx.attr("processed", true);
             }
         }
         // second pass for unescaped things added during first pass
         allElements = document.getAllElements();
         for (Element x : allElements) {
             if (x instanceof AsciidocElement) {
-                if ( x.hasAttr("processed")) {
+                if (x.hasAttr("processed")) {
                     x.removeAttr("processed");
                 } else {
                     AsciidocElement xx = (AsciidocElement) x;
@@ -438,19 +437,19 @@ public abstract class AsciidocBase {
         for (Element header : document.select(selector)) {
             int level = Integer.parseInt(header.tagName().substring(1));
             emptyToc = false;
-            if ( currentLevel < level ) {
-                Element newList = new Element("ul").addClass(String.format("sectlevel%d",level-1));
+            if (currentLevel < level) {
+                Element newList = new Element("ul").addClass(String.format("sectlevel%d", level - 1));
                 currentList.appendChild(newList);
                 currentList = newList;
                 currentLevel = level;
-            } else if ( currentLevel > level ) {
-                currentList = currentList.parents().get((currentLevel-level)*2-1); // <ul><li><ul><li>... <-- go up 2 times per level
+            } else if (currentLevel > level) {
+                currentList = currentList.parents().get((currentLevel - level) * 2 - 1); // <ul><li><ul><li>... <-- go up 2 times per level
                 currentLevel = level;
             } else {
                 currentList = currentList.parent(); // go to <ul>
             }
             Element li = new Element("li");
-            Element a = new Element("a").attr("href","#"+header.attr("id"));
+            Element a = new Element("a").attr("href", "#" + header.attr("id"));
             a.append(header.html());
             a.select("a.anchor").remove();
             li.appendChild(a);
@@ -458,7 +457,7 @@ public abstract class AsciidocBase {
             currentList = li;
         }
 
-        if ( toc.parent() == null && attributes.has("toc")) {
+        if (toc.parent() == null && attributes.has("toc")) {
             Element firstHeader = document.select("h1").first();
             Element preamble = document.select("div#preamble").first();
             if (preamble != null && attributes.getString("toc").equals("preamble")) {
@@ -472,24 +471,24 @@ public abstract class AsciidocBase {
             // Add "title" class to toc title
             toc.select("div#toctitle").addClass("title");
         }
-        if ( toc.tagName().equals(AsciidocRenderer.TOC.tag())) {
-            ((AsciidocElement)toc).process();
+        if (toc.tagName().equals(AsciidocRenderer.TOC.tag())) {
+            ((AsciidocElement) toc).process();
         }
-        if ( emptyToc && toc.parent() != null) {
+        if (emptyToc && toc.parent() != null) {
             toc.remove();
         }
 
         // Add footnotes
-        int footnoteCount = attributes.optInt("footnote:counter",0);
-        if ( footnoteCount > 0 ) {
+        int footnoteCount = attributes.optInt("footnote:counter", 0);
+        if (footnoteCount > 0) {
             Element footnotes = new Element("div").attr("id", "footnotes");
             footnotes.appendChild(new Element("hr"));
-            for ( int i = 1; i < footnoteCount; i++ ) {
-                Element div = new Element("div").addClass("footnote").attr("id", String.format("_footnotedef_%d",i));
-                Element a = new Element("a").attr("href", String.format("#_footnoteref_%d",i)).text(Integer.toString(i));
+            for (int i = 1; i < footnoteCount; i++) {
+                Element div = new Element("div").addClass("footnote").attr("id", String.format("_footnotedef_%d", i));
+                Element a = new Element("a").attr("href", String.format("#_footnoteref_%d", i)).text(Integer.toString(i));
                 div.appendChild(a);
                 div.appendText(". ");
-                div.append(attributes.getString(String.format("footnote:%d",i)));
+                div.append(attributes.getString(String.format("footnote:%d", i)));
                 footnotes.appendChild(div);
             }
             document.body().appendChild(footnotes);
@@ -499,9 +498,9 @@ public abstract class AsciidocBase {
         Set<String> ids = document.select("[id]").stream().map(e -> e.attr("id")).collect(Collectors.toSet());
 
         for (String id : ids) {
-            Elements sameId = document.getElementsByAttributeValue("id",id);
-            if ( sameId.size() > 1 ) {
-                for ( int i = 1; i < sameId.size(); i++) {
+            Elements sameId = document.getElementsByAttributeValue("id", id);
+            if (sameId.size() > 1) {
+                for (int i = 1; i < sameId.size(); i++) {
                     sameId.get(i).removeAttr("id");
                 }
             }
@@ -518,23 +517,23 @@ public abstract class AsciidocBase {
         String currentLine = "";
         String nextLine = "";
         char delimitation = 0;
-        while ( i < lines.size()-1 ) {
+        while (i < lines.size() - 1) {
             currentLine = trimRight(lines.get(i));
-            nextLine = trimRight(lines.get(i+1));
+            nextLine = trimRight(lines.get(i + 1));
             // Check if it's a delimited block and skip whatever we have there
-            if ( currentLine.length() > 0 ) {
-                if ( delimitation == 0
-                        || (currentLine.length()>=4 && isDelimited(currentLine,delimitation))
-                        || (currentLine.length()>=4 && currentLine.startsWith("|") && isDelimited(stripHead(currentLine,1), delimitation))) {
-                    if ( delimitation == '/' ) {
+            if (currentLine.length() > 0) {
+                if (delimitation == 0
+                        || (currentLine.length() >= 4 && isDelimited(currentLine, delimitation))
+                        || (currentLine.length() >= 4 && currentLine.startsWith("|") && isDelimited(stripHead(currentLine, 1), delimitation))) {
+                    if (delimitation == '/') {
                         lines.remove(i);
                         delimitation = 0;
                         continue;
                     }
                     char newDelimitation = currentLine.startsWith("|") && currentLine.length() > 1 ? currentLine.charAt(1) : currentLine.charAt(0);
-                    if ( delimitation == 0 && ((currentLine.length()>=4 && isDelimited(currentLine, newDelimitation) && "=_-./".indexOf(newDelimitation) >= 0)
-                        || (currentLine.startsWith("```") )
-                        || (currentLine.length()>=4 && currentLine.startsWith("|") && isDelimited(stripHead(currentLine,1), newDelimitation) && "=".indexOf(newDelimitation) >= 0))) {
+                    if (delimitation == 0 && ((currentLine.length() >= 4 && isDelimited(currentLine, newDelimitation) && "=_-./".indexOf(newDelimitation) >= 0)
+                            || (currentLine.startsWith("```"))
+                            || (currentLine.length() >= 4 && currentLine.startsWith("|") && isDelimited(stripHead(currentLine, 1), newDelimitation) && "=".indexOf(newDelimitation) >= 0))) {
                         delimitation = newDelimitation;
                     } else {
                         delimitation = 0;
@@ -570,7 +569,7 @@ public abstract class AsciidocBase {
                     }
                 }
             }
-            if ( delimitation == '/' ) {
+            if (delimitation == '/') {
                 lines.remove(i);
             } else {
                 i++;

@@ -4,8 +4,8 @@ import com.github.fluorumlabs.asciidocj.impl.AsciidocBase;
 import com.github.fluorumlabs.asciidocj.impl.AsciidocRenderer;
 import com.github.fluorumlabs.asciidocj.impl.ParserException;
 import org.apache.commons.lang3.StringUtils;
-import org.json.JSONObject;
 import org.json.JSONArray;
+import org.json.JSONObject;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
@@ -106,7 +106,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
     private void appendFormatted() throws ParserException {
         if (formatter == null) formatter = new AsciidocFormatter();
         JSONObject shadowProperties = new JSONObject();
-        if ( currentProperties.has("options") ) {
+        if (currentProperties.has("options")) {
             shadowProperties.put("options", currentProperties.get("options"));
         }
         String text = getTextAndClear();
@@ -122,6 +122,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 
     /**
      * Format text
+     *
      * @param text text to format
      * @return Document containing resulting DOM tree
      * @throws ParserException if there was an unrecoverable error
@@ -133,6 +134,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 
     /**
      * Format text and append to current element
+     *
      * @param text text to format
      * @throws ParserException if there was an unrecoverable error
      */
@@ -143,6 +145,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 
     /**
      * Parse sub-document and append to current element
+     *
      * @param text asciidoc of sub-document
      * @throws ParserException if there was an unrecoverable error
      */
@@ -227,44 +230,44 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
 <NEWLINE> {
     {LineFeed}* "+" {Whitespace}* {LineFeed} {
-        appendFormatted();
-        if ( lastListItem != null ) {
-            int level = skipRight(yytext(), " \t\n").length()-1;
-            Element targetListItem = lastListItem;
+                appendFormatted();
+                if (lastListItem != null) {
+                    int level = skipRight(yytext(), " \t\n").length() - 1;
+                    Element targetListItem = lastListItem;
 
-            while (level >= 0 && targetListItem != null) {
-                if ( targetListItem.tagName().equals(AsciidocRenderer.LIST_ITEM.tag())
-                     || targetListItem.tagName().equals(AsciidocRenderer.DD.tag()) ) {
-                    level--;
-                }
-                if ( level >= 0 ) {
-                    targetListItem = targetListItem.parent();
+                    while (level >= 0 && targetListItem != null) {
+                        if (targetListItem.tagName().equals(AsciidocRenderer.LIST_ITEM.tag())
+                                || targetListItem.tagName().equals(AsciidocRenderer.DD.tag())) {
+                            level--;
+                        }
+                        if (level >= 0) {
+                            targetListItem = targetListItem.parent();
+                        }
+                    }
+                    if (targetListItem != null && isTerminal(targetListItem)) {
+                        currentElement = targetListItem;
+                        lastListItem = targetListItem;
+                    } else {
+                        // If level is too deep -- ignore it and continue current item
+                        currentElement = lastListItem;
+                    }
                 }
             }
-            if ( targetListItem != null && isTerminal(targetListItem)) {
-                currentElement = targetListItem;
-                lastListItem = targetListItem;
-            } else {
-                // If level is too deep -- ignore it and continue current item
-                currentElement = lastListItem;
-            }
-        }
-      }
 }
 
 <NEWLINE> {
     {Whitespace}* {LineFeed} {
-          isDocumentTitle = false;
-      }
+                isDocumentTitle = false;
+            }
 
     ":!" {AttributeName} ":" {Whitespace}* {LineFeed} |
     ":" {AttributeName} "!:" {Whitespace}* {LineFeed}
     {
-                String[] parts = yytext().replace("!","").split(":", 3);
+                String[] parts = yytext().replace("!", "").split(":", 3);
                 String value = trimAll(parts[2]);
 
                 attributes.remove(parts[1]);
-                attributes.put(parts[1]+"!","");
+                attributes.put(parts[1] + "!", "");
             }
 
     ":" {AttributeName} ":" {NoLineFeed}* {Whitespace}+ / "//"
@@ -273,31 +276,32 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 String value = trimAll(parts[2]);
 
                 attributes.put(parts[1], value);
-                attributes.remove(parts[1]+"!");
+                attributes.remove(parts[1] + "!");
             }
 
     ":" {AttributeName} ":" ({NoLineFeed}* "\\" {LineFeed})* {NoLineFeed}* {LineFeed}
     {
                 String[] parts = yytext().split(":", 3);
-                String value = trimAll(parts[2]).replaceAll("\\\\(\\R)","\\1");
+                String value = trimAll(parts[2]).replaceAll("\\\\(\\R)", "\\1");
 
                 attributes.put(parts[1], value);
-                attributes.remove(parts[1]+"!");
+                attributes.remove(parts[1] + "!");
             }
 
     "[[" {NoLineFeed}* "]]" {Whitespace}* {LineFeed}
     {
-                String[] id = extractBetween(yytext(), "[[", "]]").split(",",2);
-                if ( id.length>0 && !id[0].isEmpty()) properties.put("id", id[0]);
-                if ( id.length>1 && !id[0].isEmpty()) properties.put("reftext", escapeIntermediate(getFormatted(id[1])));
+                String[] id = extractBetween(yytext(), "[[", "]]").split(",", 2);
+                if (id.length > 0 && !id[0].isEmpty()) properties.put("id", id[0]);
+                if (id.length > 1 && !id[0].isEmpty())
+                    properties.put("reftext", escapeIntermediate(getFormatted(id[1])));
             }
 
     "[" {NoLineFeed}+ "'" {NoLineFeed}+ "']" {Whitespace}* {LineFeed} |
     "[" {NoLineFeed}+ "]" {Whitespace}* {LineFeed}
     {
                 PropertiesParser.parse(strip(trimAll(yytext()), 1, 1), properties, true);
-                if ( properties.has("subs") ) {
-                    attributes.put(":subs",properties.get("subs"));
+                if (properties.has("subs")) {
+                    attributes.put(":subs", properties.get("subs"));
                 }
                 promoteArgumentsToClasses();
             }
@@ -306,14 +310,14 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     "|" [=]{3,128} {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption","\0");
+                String caption = properties.optString("caption", "\0");
 
-                if ( !properties.optString("cols").isEmpty() ) {
-                    if ( StringUtils.isNumeric(properties.optString("cols"))) {
+                if (!properties.optString("cols").isEmpty()) {
+                    if (StringUtils.isNumeric(properties.optString("cols"))) {
                         int n = Integer.parseInt(properties.optString("cols"));
                         JSONArray columns = new JSONArray();
                         JSONObject column = new JSONObject();
-                        for ( int i = 0; i < n; i++ ) {
+                        for (int i = 0; i < n; i++) {
                             columns.put(column);
                         }
                         properties.put("columns:", columns);
@@ -346,15 +350,15 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
     "//" .* {LineFeed}
     {
-        lastListItem = null;
-        lastBlockParent = null;
+                lastListItem = null;
+                lastBlockParent = null;
             }
 
 
     [*]{4,128} {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption","\0");
+                String caption = properties.optString("caption", "\0");
 
                 openElement(AsciidocRenderer.SIDEBAR_BLOCK);
 
@@ -369,7 +373,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     [=]{4,128} {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption","\0");
+                String caption = properties.optString("caption", "\0");
 
                 String admonitionType = null;
                 if (hasClass("NOTE")) admonitionType = "note";
@@ -381,8 +385,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 if (admonitionType != null) {
                     properties.getJSONObject("class").remove(admonitionType.toUpperCase());
                     openElement(AsciidocRenderer.ADMONITION_BLOCK)
-                        .attr("subtype", admonitionType)
-                        .attr("text", escapeIntermediate(getFormatted(attributes.optString(admonitionType+"-caption",StringUtils.capitalize(admonitionType)))));
+                            .attr("subtype", admonitionType)
+                            .attr("text", escapeIntermediate(getFormatted(attributes.optString(admonitionType + "-caption", StringUtils.capitalize(admonitionType)))));
 
                     if (!titleHtml.isEmpty()) {
                         openElement(AsciidocRenderer.TITLE).attr("caption", caption);
@@ -405,13 +409,13 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     [.]{4,128} {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption","\0");
+                String caption = properties.optString("caption", "\0");
                 boolean isListing = false;
 
-                if ( hasClass("source") || getArgument(0).equals("source")) {
+                if (hasClass("source") || getArgument(0).equals("source")) {
                     isListing = true;
                     openElement(AsciidocRenderer.LISTING_BLOCK);
-                } else{
+                } else {
                     openElement(AsciidocRenderer.LITERAL_BLOCK);
                 }
 
@@ -421,18 +425,18 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     closeElement(AsciidocRenderer.TITLE);
                 }
 
-                if ( isListing ) {
-                    attributes.put(":listing",true);
+                if (isListing) {
+                    attributes.put(":listing", true);
                 } else {
-                    attributes.put(":literal",true);
+                    attributes.put(":literal", true);
                 }
-               yybegin(LITERAL_BLOCK);
+                yybegin(LITERAL_BLOCK);
             }
 
     "--" {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption","\0");
+                String caption = properties.optString("caption", "\0");
                 boolean isListing = false;
 
                 String admonitionType = null;
@@ -445,22 +449,22 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 if (admonitionType != null) {
                     properties.getJSONObject("class").remove(admonitionType.toUpperCase());
                     openElement(AsciidocRenderer.ADMONITION_BLOCK)
-                        .attr("subtype", admonitionType)
-                        .attr("text", escapeIntermediate(getFormatted(attributes.optString(admonitionType+"-caption",StringUtils.capitalize(admonitionType)))));
+                            .attr("subtype", admonitionType)
+                            .attr("text", escapeIntermediate(getFormatted(attributes.optString(admonitionType + "-caption", StringUtils.capitalize(admonitionType)))));
 
                     if (!titleHtml.isEmpty()) {
                         openElement(AsciidocRenderer.TITLE).attr("caption", caption);
                         attachEscaped(titleHtml);
                         closeElement(AsciidocRenderer.TITLE);
                     }
-                } else if ( hasClass("abstract")  || getArgument(0).equals("abstract")) {
+                } else if (hasClass("abstract") || getArgument(0).equals("abstract")) {
                     openElement(AsciidocRenderer.QUOTE_BLOCK);
-                } else if ( hasClass("sidebar")  || getArgument(0).equals("sidebar")) {
+                } else if (hasClass("sidebar") || getArgument(0).equals("sidebar")) {
                     openElement(AsciidocRenderer.SIDEBAR_BLOCK);
-                } else if ( hasClass("source") || getArgument(0).equals("source")) {
+                } else if (hasClass("source") || getArgument(0).equals("source")) {
                     isListing = true;
                     openElement(AsciidocRenderer.LISTING_BLOCK);
-                } else{
+                } else {
                     openElement(AsciidocRenderer.OPEN_BLOCK);
                 }
 
@@ -470,8 +474,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     closeElement(AsciidocRenderer.TITLE);
                 }
 
-                if ( isListing ) {
-                    attributes.put(":listing",true);
+                if (isListing) {
+                    attributes.put(":listing", true);
                     yybegin(OPEN_LISTING_BLOCK);
                 } else {
                     yybegin(OPEN_BLOCK);
@@ -481,7 +485,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     [-]{4,128} {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption","\0");
+                String caption = properties.optString("caption", "\0");
 
                 openElement(AsciidocRenderer.LISTING_BLOCK);
 
@@ -491,23 +495,23 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     closeElement(AsciidocRenderer.TITLE);
                 }
 
-                attributes.put(":listing",true);
+                attributes.put(":listing", true);
                 yybegin(LISTING_BLOCK);
             }
 
     [_]{4,128} {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption","\0");
+                String caption = properties.optString("caption", "\0");
 
-                if ( getArgument(0).equals("quote") || getArgument(0).equals("verse")) {
+                if (getArgument(0).equals("quote") || getArgument(0).equals("verse")) {
                     properties.put("quote:attribution", escapeIntermediate(getFormatted(getArgument(1))));
                     properties.put("quote:cite", escapeIntermediate(getFormatted(getArgument(2))));
                 }
 
                 boolean isVerse = getArgument(0).equals("verse");
-                if ( isVerse ) {
-                    properties.put("verse%","");
+                if (isVerse) {
+                    properties.put("verse%", "");
                 }
 
                 openElement(AsciidocRenderer.QUOTE_BLOCK);
@@ -518,7 +522,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     closeElement(AsciidocRenderer.TITLE);
                 }
 
-                if ( isVerse ) {
+                if (isVerse) {
                     yybegin(VERSE_BLOCK);
                 } else {
                     yybegin(QUOTE_BLOCK);
@@ -528,7 +532,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     "\"\"" {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption","\0");
+                String caption = properties.optString("caption", "\0");
 
                 properties.put("quote:attribution", escapeIntermediate(getFormatted(getArgument(1))));
                 properties.put("quote:cite", escapeIntermediate(getFormatted(getArgument(2))));
@@ -546,38 +550,40 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
     "\"" ({NoLineFeed}+ {LineFeed})* {NoLineFeed}+ "\"" {LineFeed} "-- " {NoLineFeed}+ {LineFeed}
     {
-        // Quoted paragraph -_-
-        String text = stripTail(yytext(),1);
-        String cite = extractAfterStrict(text,"-- ");
-        text = strip(text, 1, cite.length()+5); // including double quotes, line feed and "-- "
-        String[] attribution = cite.split(",",2);
+                // Quoted paragraph -_-
+                String text = stripTail(yytext(), 1);
+                String cite = extractAfterStrict(text, "-- ");
+                text = strip(text, 1, cite.length() + 5); // including double quotes, line feed and "-- "
+                String[] attribution = cite.split(",", 2);
 
-        String titleHtml = properties.optString("title:html");
-        String caption = properties.optString("caption","\0");
+                String titleHtml = properties.optString("title:html");
+                String caption = properties.optString("caption", "\0");
 
-        if ( attribution.length > 0 ) properties.put("quote:attribution", escapeIntermediate(getFormatted(attribution[0].trim())));
-        if ( attribution.length > 1 ) properties.put("quote:cite", escapeIntermediate(getFormatted(attribution[1].trim())));
+                if (attribution.length > 0)
+                    properties.put("quote:attribution", escapeIntermediate(getFormatted(attribution[0].trim())));
+                if (attribution.length > 1)
+                    properties.put("quote:cite", escapeIntermediate(getFormatted(attribution[1].trim())));
 
-        openElement(AsciidocRenderer.QUOTE_BLOCK);
+                openElement(AsciidocRenderer.QUOTE_BLOCK);
 
-        if (!titleHtml.isEmpty()) {
-            openElement(AsciidocRenderer.TITLE).attr("caption", caption);
-            attachEscaped(titleHtml);
-            closeElement(AsciidocRenderer.TITLE);
-        }
+                if (!titleHtml.isEmpty()) {
+                    openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                    attachEscaped(titleHtml);
+                    closeElement(AsciidocRenderer.TITLE);
+                }
 
-        appendFormatted(text);
+                appendFormatted(text);
 
-        closeElement(AsciidocRenderer.QUOTE_BLOCK);
-    }
+                closeElement(AsciidocRenderer.QUOTE_BLOCK);
+            }
 
     [`]{3,128} [a-z\-_]* {Whitespace}* {LineFeed}
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption","\0");
+                String caption = properties.optString("caption", "\0");
 
-                String language = skipLeft(trimAll(yytext()),"`");
-                if ( !language.isEmpty() ) {
+                String language = skipLeft(trimAll(yytext()), "`");
+                if (!language.isEmpty()) {
                     properties.put("source-language", language);
                 }
 
@@ -589,7 +595,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     closeElement(AsciidocRenderer.TITLE);
                 }
 
-                attributes.put(":listing",true);
+                attributes.put(":listing", true);
                 yybegin(LISTING_FENCE_BLOCK);
             }
 
@@ -619,8 +625,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     level++;
                 }
                 String title = trimAll(skipLeft(text, "=# \t"));
-                if ( title.endsWith(" "+StringUtils.repeat(text.charAt(0),level))) {
-                    title = stripTail(title,level+1);
+                if (title.endsWith(" " + StringUtils.repeat(text.charAt(0), level))) {
+                    title = stripTail(title, level + 1);
                 }
                 if (level > 0) {
                     closeElement(AsciidocRenderer.SECTION, level + 4);
@@ -633,82 +639,82 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     }
                     JSONObject props = properties;
                     openElement(AsciidocRenderer.SECTION).attr("level", Integer.toString(level));
-                    if ( isDocumentTitle && level == 1) {
-                        currentElement.attr("is-document-title",true);
+                    if (isDocumentTitle && level == 1) {
+                        currentElement.attr("is-document-title", true);
                     }
                     properties = props;
                 }
                 Document formattedTitle = getFormatted(title);
                 String formattedTitleString = escapeIntermediate(formattedTitle);
-                String formattedReferenceString = escapeIntermediate(getFormatted(properties.optString("reftext",title)));
+                String formattedReferenceString = escapeIntermediate(getFormatted(properties.optString("reftext", title)));
 
                 // Process sectnums
-                int sectNumDepth = attributes.optInt("sectnumlevels",3)+2;
+                int sectNumDepth = attributes.optInt("sectnumlevels", 3) + 2;
                 boolean sectNums = attributes.has("sectnums") || hasClass("appendix") || attributes.has("numbered");
-                String attribute = hasClass("appendix")?"sectnum-appx":"sectnum";
+                String attribute = hasClass("appendix") ? "sectnum-appx" : "sectnum";
 
                 StringBuilder num = new StringBuilder();
 
-                attributes.put(attribute+":"+Integer.toString(level), attributes.optInt(attribute+":"+Integer.toString(level), 0)+(sectNums?1:0));
-                if ( hasClass("appendix") ) {
-                    attributes.put("sectnum-type:"+Integer.toString(level),"Appendix");
+                attributes.put(attribute + ":" + Integer.toString(level), attributes.optInt(attribute + ":" + Integer.toString(level), 0) + (sectNums ? 1 : 0));
+                if (hasClass("appendix")) {
+                    attributes.put("sectnum-type:" + Integer.toString(level), "Appendix");
                 }
-                if ( sectNums ) {
-                    for ( int i = level+1; i<6; i++) {
-                        attributes.remove("sectnum:"+Integer.toString(i));
-                        attributes.remove("sectnum-appx:"+Integer.toString(i));
-                        attributes.remove("sectnum-type:"+Integer.toString(i));
+                if (sectNums) {
+                    for (int i = level + 1; i < 6; i++) {
+                        attributes.remove("sectnum:" + Integer.toString(i));
+                        attributes.remove("sectnum-appx:" + Integer.toString(i));
+                        attributes.remove("sectnum-type:" + Integer.toString(i));
                     }
                     boolean first = true;
-                    if ( level < sectNumDepth ) {
-                        for ( int i = 2; i <= level; i++ ) {
+                    if (level < sectNumDepth) {
+                        for (int i = 2; i <= level; i++) {
                             String key = Integer.toString(i);
-                            int n = attributes.optInt(attribute+":"+key, 0);
-                            if ( !first ) {
+                            int n = attributes.optInt(attribute + ":" + key, 0);
+                            if (!first) {
                                 num.append(".");
                             }
-                            if ( n > 0 && n < 26 && attributes.optString("sectnum-type:"+key).equals("Appendix")) {
-                                num.append((char)('A'+n-1));
+                            if (n > 0 && n < 26 && attributes.optString("sectnum-type:" + key).equals("Appendix")) {
+                                num.append((char) ('A' + n - 1));
                                 first = false;
-                            } else if ( n > 0 ) {
+                            } else if (n > 0) {
                                 num.append(Integer.toString(n));
                                 first = false;
-                            } else if ( attributes.has(attribute+":"+key)) {
+                            } else if (attributes.has(attribute + ":" + key)) {
                                 first = false;
                             }
                         }
                     }
                 }
 
-                if ( id.isEmpty() && (level > 1 || !isDocumentTitle) && !attributes.has("sectids!")) {
-                    String idBase = attributes.optString("idprefix","_") + AsciidocRenderer.slugify(formattedTitle.text()).replace("_",attributes.optString("idseparator","_"));
+                if (id.isEmpty() && (level > 1 || !isDocumentTitle) && !attributes.has("sectids!")) {
+                    String idBase = attributes.optString("idprefix", "_") + AsciidocRenderer.slugify(formattedTitle.text()).replace("_", attributes.optString("idseparator", "_"));
                     id = idBase;
                     int idx = 1;
-                    while ( attributes.has("anchor:"+id)) {
+                    while (attributes.has("anchor:" + id)) {
                         idx++;
-                        id = String.format("%s%s%d",idBase,attributes.optString("idseparator","_"),idx);
+                        id = String.format("%s%s%d", idBase, attributes.optString("idseparator", "_"), idx);
                     }
                     properties.put("id", id);
                 }
 
                 if (!id.isEmpty()) {
                     attributes.put("anchor:" + id, formattedReferenceString);
-                    if ( sectNums && level > 1 && !properties.has("reftext") && !hasClass("appendix")) {
-                        attributes.put(attribute+":"+id, "Section " + num.toString());
-                    } else if ( hasClass("appendix") && level == 2 && !properties.has("reftext")) {
-                        attributes.put(attribute+":"+id, attributes.optString("appendix-caption","Appendix") + " " + num.toString());
+                    if (sectNums && level > 1 && !properties.has("reftext") && !hasClass("appendix")) {
+                        attributes.put(attribute + ":" + id, "Section " + num.toString());
+                    } else if (hasClass("appendix") && level == 2 && !properties.has("reftext")) {
+                        attributes.put(attribute + ":" + id, attributes.optString("appendix-caption", "Appendix") + " " + num.toString());
                     }
                 }
 
                 openElement(AsciidocRenderer.HEADER).attr("level", Integer.toString(level)).attr("sectNum", num.toString());
-                if ( isDocumentTitle && level == 1) {
-                    currentElement.attr("is-document-title",true);
+                if (isDocumentTitle && level == 1) {
+                    currentElement.attr("is-document-title", true);
                 }
                 appendDocument(formattedTitle);
                 closeElement(AsciidocRenderer.HEADER);
 
                 if (level == 1 && isDocumentTitle) {
-                    if ( !attributes.has("doctitle") ) {
+                    if (!attributes.has("doctitle")) {
                         attributes.put("doctitle", formattedTitleString);
                     }
                     yybegin(SKIP);
@@ -726,20 +732,20 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
                 String id = "";
                 String text = "";
-                String[] data = extractBetween(yytext(), "[[[", "]]]").split(",",2);
-                if ( data.length>0 ) id = data[0].trim();
-                if ( data.length>1 ) {
+                String[] data = extractBetween(yytext(), "[[[", "]]]").split(",", 2);
+                if (data.length > 0) id = data[0].trim();
+                if (data.length > 1) {
                     text = data[1].trim();
                 } else {
                     text = id;
                 }
 
                 int level = 1;
-                if ( !isTerminal(lastListItem) ) {
+                if (!isTerminal(lastListItem)) {
                     closeBlockElement();
                     lastListItem = null;
                 }
-                if ( lastListItem != null ) {
+                if (lastListItem != null) {
                     currentElement = lastListItem;
                 }
                 closeToElement(AsciidocRenderer.UL, level);
@@ -763,8 +769,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 closeElement(AsciidocRenderer.LINK);
 
                 if (!text.isEmpty()) {
-                    attributes.put("anchor:" + id, "["+text+"]");
-                    appendText("["+text+"] ");
+                    attributes.put("anchor:" + id, "[" + text + "]");
+                    appendText("[" + text + "] ");
                     appendTextNode();
                 }
 
@@ -778,7 +784,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
                 String text = trimAll(stripTail(yytext(), 3));
                 int level = text.length();
-                if ( !isTerminal(lastListItem) ) {
+                if (!isTerminal(lastListItem)) {
                     closeBlockElement();
                     lastListItem = null;
                 }
@@ -814,7 +820,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
                 String text = trimAll(yytext());
                 int level = text.length();
-                if ( !isTerminal(lastListItem) ) {
+                if (!isTerminal(lastListItem)) {
                     closeBlockElement();
                     lastListItem = null;
                 }
@@ -843,7 +849,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
                 String text = trimAll(yytext());
                 int level = text.replaceAll("[^.]", "").length();
-                if ( !isTerminal(lastListItem) ) {
+                if (!isTerminal(lastListItem)) {
                     closeBlockElement();
                     lastListItem = null;
                 }
@@ -874,7 +880,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 String text = trimAll(yytext());
                 String term = extractBeforeStrict(text, "::");
                 int level = text.length() - term.length() - 1;
-                if ( !isTerminal(lastListItem) ) {
+                if (!isTerminal(lastListItem)) {
                     closeBlockElement();
                     lastListItem = null;
                 }
@@ -904,7 +910,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     {
                 String titleHtml = properties.optString("title:html");
 
-                if ( !isTerminal(lastListItem) ) {
+                if (!isTerminal(lastListItem)) {
                     closeBlockElement();
                     lastListItem = null;
                 }
@@ -942,34 +948,34 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     "ifdef::" {AttributeName} "[" [^\]]+ "]" {Whitespace}* {LineFeed} |
     "ifdef::" {AttributeName} "[]" {Whitespace}* {LineFeed} ~ "endif::" {NoLineFeed}* {LineFeed}
     {
-          String attribute = extractAfter(extractBeforeStrict(yytext(),"["),"::");
-          String inlineValue = extractAfter(extractBeforeStrict(yytext(),"]"),"[");
-          if ( attributes.has(attribute) ) {
-              appendTextNode();
-              if ( inlineValue.isEmpty() ) {
-                  String outlineValue = extractBetween(yytext(), "[]", "endif::");
-                  appendSubdocument(outlineValue);
-              } else {
-                  appendSubdocument(inlineValue);
-              }
-          }
-      }
+                String attribute = extractAfter(extractBeforeStrict(yytext(), "["), "::");
+                String inlineValue = extractAfter(extractBeforeStrict(yytext(), "]"), "[");
+                if (attributes.has(attribute)) {
+                    appendTextNode();
+                    if (inlineValue.isEmpty()) {
+                        String outlineValue = extractBetween(yytext(), "[]", "endif::");
+                        appendSubdocument(outlineValue);
+                    } else {
+                        appendSubdocument(inlineValue);
+                    }
+                }
+            }
 
     "ifndef::" {AttributeName} "[" [^\]]+ "]" {Whitespace}* {LineFeed} |
     "ifndef::" {AttributeName} "[]" {Whitespace}* {LineFeed} ~ "endif::" {NoLineFeed}* {LineFeed}
     {
-          String attribute = extractAfter(extractBeforeStrict(yytext(),"["),"::");
-          String inlineValue = extractAfter(extractBeforeStrict(yytext(),"]"),"[");
-          if ( attributes.has(attribute+"!") || !attributes.has(attribute) ) {
-              appendTextNode();
-              if ( inlineValue.isEmpty() ) {
-                  String outlineValue = extractBetween(yytext(), "[]", "endif::");
-                  appendSubdocument(outlineValue);
-              } else {
-                  appendSubdocument(inlineValue);
-              }
-          }
-      }
+                String attribute = extractAfter(extractBeforeStrict(yytext(), "["), "::");
+                String inlineValue = extractAfter(extractBeforeStrict(yytext(), "]"), "[");
+                if (attributes.has(attribute + "!") || !attributes.has(attribute)) {
+                    appendTextNode();
+                    if (inlineValue.isEmpty()) {
+                        String outlineValue = extractBetween(yytext(), "[]", "endif::");
+                        appendSubdocument(outlineValue);
+                    } else {
+                        appendSubdocument(inlineValue);
+                    }
+                }
+            }
 
     "image::" {NoLineFeed}+ {Properties}? {Whitespace}* {LineFeed}
     {
@@ -978,19 +984,20 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 if (!imgUrl.startsWith("http://") && !imgUrl.startsWith("https://")) {
                     String path = attributes.optString("imagesdir", DEFAULT_IMAGESDIR);
                     if (!path.endsWith("/")) path = path.concat("/");
-                   imgUrl = path.concat(imgUrl);
+                    imgUrl = path.concat(imgUrl);
                 }
 
                 PropertiesParser.parse(extractBetween(yytext(), "[", "]"), properties, false);
 
                 String alt = properties.optString("alt", getArgument(0));
-                if (alt.isEmpty()) alt = extractAfterStrict(extractBeforeStrict(imgUrl, "."), "/").replaceAll("[\\-_]"," ");
+                if (alt.isEmpty())
+                    alt = extractAfterStrict(extractBeforeStrict(imgUrl, "."), "/").replaceAll("[\\-_]", " ");
                 String titleHtml = properties.optString("title:html");
                 String title = properties.optString("title");
-                String caption = properties.optString("caption","\0");
+                String caption = properties.optString("caption", "\0");
                 String link = properties.optString("link");
 
-                if ( !title.isEmpty() ) {
+                if (!title.isEmpty()) {
                     titleHtml = escapeIntermediate(getFormatted(title));
                 }
 
@@ -1032,14 +1039,14 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 PropertiesParser.parse(extractBetween(yytext(), "[", "]"), properties, false);
 
                 if (!videoUrl.startsWith("http://") && !videoUrl.startsWith("https://")
-                    && !getArgument(0).equals("youtube") && !getArgument(0).equals("vimeo")) {
+                        && !getArgument(0).equals("youtube") && !getArgument(0).equals("vimeo")) {
                     String path = attributes.optString("imagesdir", DEFAULT_IMAGESDIR);
                     if (!path.endsWith("/")) path = path.concat("/");
-                   videoUrl = path.concat(videoUrl);
+                    videoUrl = path.concat(videoUrl);
                 }
 
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption","\0");
+                String caption = properties.optString("caption", "\0");
 
                 openElement(AsciidocRenderer.VIDEO_BLOCK).attr("src", videoUrl);
 
@@ -1061,11 +1068,11 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 if (!audioUrl.startsWith("http://") && !audioUrl.startsWith("https://")) {
                     String path = attributes.optString("imagesdir", DEFAULT_IMAGESDIR);
                     if (!path.endsWith("/")) path = path.concat("/");
-                   audioUrl = path.concat(audioUrl);
+                    audioUrl = path.concat(audioUrl);
                 }
 
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption","\0");
+                String caption = properties.optString("caption", "\0");
 
                 openElement(AsciidocRenderer.AUDIO_BLOCK).attr("src", audioUrl);
 
@@ -1080,19 +1087,19 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
     "toc::" {Properties}? {Whitespace}* {LineFeed}
     {
-        openElement(AsciidocRenderer.TOC);
-        closeElement(AsciidocRenderer.TOC);
-    }
+                openElement(AsciidocRenderer.TOC);
+                closeElement(AsciidocRenderer.TOC);
+            }
 
     {AdmonitionType} ":" {NoLineFeed}
     {
-                    String subType = extractBefore(yytext(), ":").toLowerCase();
-                    openElement(AsciidocRenderer.ADMONITION_BLOCK)
+                String subType = extractBefore(yytext(), ":").toLowerCase();
+                openElement(AsciidocRenderer.ADMONITION_BLOCK)
                         .attr("subtype", subType)
-                        .attr("text", escapeIntermediate(getFormatted(attributes.optString(subType+"-caption",StringUtils.capitalize(subType)))));
-                    yypushback(1);
-                    yybegin(BLOCK);
-                }
+                        .attr("text", escapeIntermediate(getFormatted(attributes.optString(subType + "-caption", StringUtils.capitalize(subType)))));
+                yypushback(1);
+                yybegin(BLOCK);
+            }
 
 
     {Whitespace}+ {NoLineFeed}
@@ -1101,7 +1108,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
                 openElement(AsciidocRenderer.LITERAL_BLOCK);
 
-                if ( !titleHtml.isEmpty() ) {
+                if (!titleHtml.isEmpty()) {
                     openElement(AsciidocRenderer.TITLE);
                     attachEscaped(titleHtml);
                     closeElement(AsciidocRenderer.TITLE);
@@ -1114,7 +1121,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     [^]
     {
                 String titleHtml = properties.optString("title:html");
-                String caption = properties.optString("caption","\0");
+                String caption = properties.optString("caption", "\0");
 
                 String admonitionType = null;
                 if (hasClass("NOTE")) admonitionType = "note";
@@ -1126,8 +1133,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 if (admonitionType != null) {
                     properties.getJSONObject("class").remove(admonitionType.toUpperCase());
                     openElement(AsciidocRenderer.ADMONITION_BLOCK)
-                        .attr("subtype", admonitionType)
-                        .attr("text", escapeIntermediate(getFormatted(attributes.optString(admonitionType+"-caption",StringUtils.capitalize(admonitionType)))));
+                            .attr("subtype", admonitionType)
+                            .attr("text", escapeIntermediate(getFormatted(attributes.optString(admonitionType + "-caption", StringUtils.capitalize(admonitionType)))));
 
                     if (!titleHtml.isEmpty()) {
                         openElement(AsciidocRenderer.TITLE).attr("caption", caption);
@@ -1142,13 +1149,13 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     openElement(AsciidocRenderer.LITERAL_BLOCK);
 
                     if (!titleHtml.isEmpty()) {
-                       openElement(AsciidocRenderer.TITLE).attr("caption", caption);
+                        openElement(AsciidocRenderer.TITLE).attr("caption", caption);
                         attachEscaped(titleHtml);
-                       closeElement(AsciidocRenderer.TITLE);
+                        closeElement(AsciidocRenderer.TITLE);
                     }
 
                     yybegin(LITERAL_PARAGRAPH);
-                 } else if (getArgument(0).equals("source") || getArgument(0).equals("listing")) {
+                } else if (getArgument(0).equals("source") || getArgument(0).equals("listing")) {
                     yypushback(1);
                     openElement(AsciidocRenderer.LISTING_BLOCK);
 
@@ -1158,15 +1165,15 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                         closeElement(AsciidocRenderer.TITLE);
                     }
 
-                    attributes.put(":listing",true);
+                    attributes.put(":listing", true);
                     yybegin(LISTING_PARAGRAPH);
                 } else if (getArgument(0).equals("quote") || getArgument(0).equals("verse")) {
                     yypushback(1);
                     properties.put("quote:attribution", escapeIntermediate(getFormatted(getArgument(1))));
                     properties.put("quote:cite", escapeIntermediate(getFormatted(getArgument(2))));
                     boolean isVerse = getArgument(0).equals("verse");
-                    if ( isVerse ) {
-                        properties.put("verse%","");
+                    if (isVerse) {
+                        properties.put("verse%", "");
                     }
                     openElement(AsciidocRenderer.QUOTE_BLOCK);
 
@@ -1176,13 +1183,13 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                         closeElement(AsciidocRenderer.TITLE);
                     }
 
-                    if ( isVerse ) {
+                    if (isVerse) {
                         yybegin(VERSE_PARAGRAPH);
                     } else {
                         yybegin(BLOCK);
                     }
-                } else if (getArgument(0).equals("pass") ) {
-                    attributes.put(":pass","");
+                } else if (getArgument(0).equals("pass")) {
+                    attributes.put(":pass", "");
                     openElement(AsciidocRenderer.PASSTHROUGH_BLOCK);
 
                     yypushback(1);
@@ -1224,24 +1231,24 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     {LineFeed}? [#]{1,6} {Whitespace}+ {NoLineFeed}+ {LineFeed} |
     {LineFeed}* [-/]{4,128} {Whitespace}* {LineFeed}
     {
-        if ( yytext().startsWith("if") && !yytext().contains("\n+\n")) {
-            appendText(yytext());
-        } else {
-          // Check for those stupid cases when the first newline should be skipped
-            if ( zzLexicalState != LIST_PARAGRAPH || getText().contains("\n")) {
-                if ( yytext().startsWith("\n")) {
-                    yypushback(yytext().length()-1);
+                if (yytext().startsWith("if") && !yytext().contains("\n+\n")) {
+                    appendText(yytext());
                 } else {
-                    yypushback(yytext().length());
+                    // Check for those stupid cases when the first newline should be skipped
+                    if (zzLexicalState != LIST_PARAGRAPH || getText().contains("\n")) {
+                        if (yytext().startsWith("\n")) {
+                            yypushback(yytext().length() - 1);
+                        } else {
+                            yypushback(yytext().length());
+                        }
+                    } else {
+                        yypushback(yytext().length());
+                    }
+                    appendFormatted();
+                    closeBlockElement();
+                    yybegin(NEWLINE);
                 }
-            } else {
-                yypushback(yytext().length());
             }
-            appendFormatted();
-            closeBlockElement();
-            yybegin(NEWLINE);
-            }
-        }
 }
 
 <BLOCK> {
@@ -1275,9 +1282,9 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 if (!getText().isEmpty()) {
                     appendText(trimLeftLines(getTextAndClear()));
                     appendTextNode();
-          }
-          return null;
-      }
+                }
+                return null;
+            }
 
     {LineFeed}
     {
@@ -1319,7 +1326,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
     {NoLineFeed}+ {LineFeed}
     {
-                if ( currentElement.tagName().equals(AsciidocRenderer.P.tag())) {
+                if (currentElement.tagName().equals(AsciidocRenderer.P.tag())) {
                     currentElement.attr("keep", true);
                 }
                 if (!getText().isEmpty()) {
@@ -1364,10 +1371,10 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 <LISTING_BLOCK> {
     {Whitespace}* {LineFeed}* [-]{4,128} {Whitespace}* {LineFeed}
     {
-        appendFormatted();
-        closeBlockElement();
-        yybegin(NEWLINE);
-    }
+                appendFormatted();
+                closeBlockElement();
+                yybegin(NEWLINE);
+            }
 }
 
 <QUOTE_BLOCK> {
@@ -1397,8 +1404,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
     {NoLineFeed}* {LineFeed}
     {
-                appendFormatted(stripTail(yytext(),1));
-                appendText(yytext().substring(yytext().length()-1));
+                appendFormatted(stripTail(yytext(), 1));
+                appendText(yytext().substring(yytext().length() - 1));
                 appendTextNode();
             }
 }
@@ -1416,8 +1423,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 
     {NoLineFeed}+ {LineFeed}
     {
-                appendFormatted(stripTail(yytext(),1));
-                appendText(yytext().substring(yytext().length()-1));
+                appendFormatted(stripTail(yytext(), 1));
+                appendText(yytext().substring(yytext().length() - 1));
                 appendTextNode();
             }
 }
@@ -1439,19 +1446,19 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 <LISTING_FENCE_BLOCK> {
     {Whitespace}* {LineFeed}* [`]{3,128} {Whitespace}* {LineFeed}
     {
-        appendFormatted();
-        closeBlockElement();
-        yybegin(NEWLINE);
-    }
+                appendFormatted();
+                closeBlockElement();
+                yybegin(NEWLINE);
+            }
 }
 
 <LISTING_PARAGRAPH> {
     {Whitespace}* {LineFeed} / {LineFeed}
     {
-        appendFormatted();
-        closeBlockElement();
-        yybegin(NEWLINE);
-    }
+                appendFormatted();
+                closeBlockElement();
+                yybegin(NEWLINE);
+            }
 }
 
 <OPEN_LISTING_BLOCK, LISTING_BLOCK, LISTING_PARAGRAPH, LISTING_FENCE_BLOCK, LITERAL_BLOCK> {
@@ -1532,7 +1539,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                     tableProperties.put("firstRowCellCount", tableCellCounter);
                 }
 
-                if (!tableProperties.has("headerCellCount") ) {
+                if (!tableProperties.has("headerCellCount")) {
                     tableProperties.put("headerCellCount", tableCellCounter);
                 }
             }
@@ -1541,7 +1548,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     {CellFormat} "|"
     {
                 tableCellCounter++;
-                properties.put("format",CellFormatParser.parse(trimLeft(extractBeforeStrict(yytext(),"|"))));
+                properties.put("format", CellFormatParser.parse(trimLeft(extractBeforeStrict(yytext(), "|"))));
                 openElement(AsciidocRenderer.TABLE_CELL);
                 yypushback(yytext().length() - yytext().indexOf("|") - 1);
                 yybegin(TABLE_CELL);
@@ -1566,10 +1573,10 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     {LineFeed} {Whitespace}* {LineFeed} {CellFormat} "|"
     {
                 String source = getTextAndClear();
-                int duplicates = currentProperties.getJSONObject("format").optInt("duplicate",1);
+                int duplicates = currentProperties.getJSONObject("format").optInt("duplicate", 1);
                 appendSubdocument(source);
                 closeElement(AsciidocRenderer.TABLE_CELL);
-                for ( int i = 1; i < duplicates; i++ ) {
+                for (int i = 1; i < duplicates; i++) {
                     properties = currentProperties;
 
                     tableCellCounter++;
@@ -1582,8 +1589,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
             }
 
     "\\|" {
-          appendText("|");
-      }
+                appendText("|");
+            }
 
     [^]
     {
@@ -1608,8 +1615,8 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 <OPEN_LISTING_BLOCK> {
     {Whitespace}* {LineFeed}* "--" {Whitespace}* {LineFeed}
     {
-        appendFormatted();
-        closeBlockElement();
-        yybegin(NEWLINE);
-    }
+                appendFormatted();
+                closeBlockElement();
+                yybegin(NEWLINE);
+            }
 }

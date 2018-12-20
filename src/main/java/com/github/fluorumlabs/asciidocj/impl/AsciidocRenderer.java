@@ -1,7 +1,6 @@
 package com.github.fluorumlabs.asciidocj.impl;
 
 import com.github.slugify.Slugify;
-import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.nodes.Document;
@@ -76,7 +75,7 @@ public enum AsciidocRenderer {
             html(div, x.getProperties().optString("quote:attribution"), x.getVariables());
             if (!x.getProperties().optString("quote:cite").isEmpty()) {
                 div.appendChild(new Element("br"));
-                div.appendChild(html(new Element("cite"),x.getProperties().optString("quote:cite"),x.getVariables()));
+                div.appendChild(html(new Element("cite"), x.getProperties().optString("quote:cite"), x.getVariables()));
             }
             x.appendChild(div);
         }
@@ -93,7 +92,7 @@ public enum AsciidocRenderer {
         div.appendChild(pre);
 
         moveChildNodes(x, pre);
-        if ( title != null ) {
+        if (title != null) {
             x.appendChild(title);
         }
         x.appendChild(div);
@@ -110,12 +109,12 @@ public enum AsciidocRenderer {
         table.appendChild(tbody);
         tbody.appendChild(tr);
         tr.appendChild(td1).appendChild(td2);
-        if ( !x.getVariables().optString("icons").equals("font")) {
+        if (!x.getVariables().optString("icons").equals("font")) {
             Element div1 = html(new Element("div").addClass("title"), x.attr("text"), x.getVariables());
             td1.appendChild(div1);
         } else {
-            AsciidocElement icon = new AsciidocElement(AsciidocRenderer.ICON,new JSONObject(),x.getVariables());
-            icon.attr("icon","icon-"+subType).attr("raw",true);
+            AsciidocElement icon = new AsciidocElement(AsciidocRenderer.ICON, new JSONObject(), x.getVariables());
+            icon.attr("icon", "icon-" + subType).attr("raw", true);
             icon.attr("title", x.attr("text"));
             td1.appendChild(icon);
         }
@@ -398,8 +397,8 @@ public enum AsciidocRenderer {
         }
         if (x.getProperties().has("to-id")) {
             String id = x.getProperties().getString("to-id");
-            if ( id.contains("#")) {
-                if ( id.endsWith("#") ) id = stripTail(id,1);
+            if (id.contains("#")) {
+                if (id.endsWith("#")) id = stripTail(id, 1);
                 x.attr("href", id);
                 if (x.getProperties().has("to-id-contents")) {
                     html(x, x.getProperties().getString("to-id-contents"), x.getVariables());
@@ -408,10 +407,10 @@ public enum AsciidocRenderer {
                 }
             } else {
                 // Transform free text to id
-                if ( !x.getVariables().has("anchor:" + id) ) {
+                if (!x.getVariables().has("anchor:" + id)) {
                     // Unknown id
                     for (String key : x.getVariables().keySet()) {
-                        if ( key.startsWith("anchor:") && id.equals(x.getVariables().optString(key)) ) {
+                        if (key.startsWith("anchor:") && id.equals(x.getVariables().optString(key))) {
                             id = key.substring(7);
                             break;
                         }
@@ -419,7 +418,7 @@ public enum AsciidocRenderer {
                 }
                 x.attr("href", "#" + id);
                 if (x.getProperties().has("to-id-contents")) {
-                    html(x,x.getProperties().getString("to-id-contents"),x.getVariables());
+                    html(x, x.getProperties().getString("to-id-contents"), x.getVariables());
                 } else {
                     String idText = x.getVariables().optString("anchor:" + id, "");
 
@@ -434,7 +433,7 @@ public enum AsciidocRenderer {
                         idText = "[" + id + "]";
                     }
 
-                    html(x,idText,x.getVariables());
+                    html(x, idText, x.getVariables());
                 }
             }
             if (x.getVariables().optString("xrefstyle").equals("full") && x.getVariables().has("sectnum:" + id)) {
@@ -695,16 +694,16 @@ public enum AsciidocRenderer {
         x.appendText("[");
 
         Element a = new Element("a").addClass("footnote")
-                .attr("href",String.format("#_footnotedef_%s", idx))
-                .attr("id",String.format("_footnoteref_%s", idx))
-                .attr("title","View footnote.")
+                .attr("href", String.format("#_footnotedef_%s", idx))
+                .attr("id", String.format("_footnoteref_%s", idx))
+                .attr("title", "View footnote.")
                 .text(idx);
         x.appendChild(a);
         x.appendText("]");
         x.removeAttr("index");
     }),
     SPAN(x -> {
-        if ( x.classNames().isEmpty() ) {
+        if (x.classNames().isEmpty()) {
             moveChildNodesToParent(x);
             x.remove();
         } else {
@@ -731,9 +730,9 @@ public enum AsciidocRenderer {
             x.addClass("stripes-" + x.getProperties().getString("stripes"));
         }
 
-        if (x.getProperties().has("width") && !x.getProperties().getString("width").equals("100%") ) {
+        if (x.getProperties().has("width") && !x.getProperties().getString("width").equals("100%")) {
             x.attr("style", "width: " + x.getProperties().getString("width") + ";");
-        } else if ( hasOption(x,"autowidth") ) {
+        } else if (hasOption(x, "autowidth")) {
             x.addClass("fit-content");
         } else {
             x.addClass("stretch");
@@ -744,7 +743,7 @@ public enum AsciidocRenderer {
         int totalWidthFactor = StreamSupport.stream(columns.spliterator(), false)
                 .filter(o -> !((JSONObject) o).optBoolean("autowidth"))
                 .mapToInt(o -> ((JSONObject) o).optInt("width", 1)).sum();
-        boolean hasAutowidth = hasOption(x,"autowidth") || StreamSupport.stream(columns.spliterator(), false)
+        boolean hasAutowidth = hasOption(x, "autowidth") || StreamSupport.stream(columns.spliterator(), false)
                 .anyMatch(o -> ((JSONObject) o).optBoolean("autowidth"));
 
         if (hasAutowidth) {
@@ -787,13 +786,13 @@ public enum AsciidocRenderer {
             JSONObject cellFormat = ((AsciidocElement) cell).getProperties().getJSONObject("format");
             boolean hasCellFormat =
                     cellFormat.has("default")
-                    || cellFormat.has("asciidoc")
-                    || cellFormat.has("em")
-                    || cellFormat.has("header")
-                    || cellFormat.has("literal")
-                    || cellFormat.has("monospace")
-                    || cellFormat.has("strong")
-                    || cellFormat.has("verse");
+                            || cellFormat.has("asciidoc")
+                            || cellFormat.has("em")
+                            || cellFormat.has("header")
+                            || cellFormat.has("literal")
+                            || cellFormat.has("monospace")
+                            || cellFormat.has("strong")
+                            || cellFormat.has("verse");
             for (String key : columnFormat.keySet()) {
                 boolean skip = "default,asciidoc,em,header,literal,monospace,strong,verse".contains(key) && hasCellFormat;
                 if (!cellFormat.has(key) && !skip) {
@@ -812,29 +811,29 @@ public enum AsciidocRenderer {
                 }
             }
 
-            int spanRow = cellFormat.optInt("spanRow",1);
-            int spanColumn = cellFormat.optInt("spanColumn",1);
-            while ( occupiedCells.size() < rowCounter+spanRow+1 ) {
+            int spanRow = cellFormat.optInt("spanRow", 1);
+            int spanColumn = cellFormat.optInt("spanColumn", 1);
+            while (occupiedCells.size() < rowCounter + spanRow + 1) {
                 occupiedCells.add(new boolean[columns.length()]);
             }
 
-            for ( int i = 0; i < spanRow; i++ ) {
-                for ( int j = 0; j < spanColumn; j++) {
-                    if ( columnCounter+j < columns.length()) {
+            for (int i = 0; i < spanRow; i++) {
+                for (int j = 0; j < spanColumn; j++) {
+                    if (columnCounter + j < columns.length()) {
                         occupiedCells.get(rowCounter + i)[columnCounter + j] = true;
                     }
                 }
             }
 
-            Element tcell = new Element(isHead||cellFormat.optBoolean("header") ? "th" : "td");
+            Element tcell = new Element(isHead || cellFormat.optBoolean("header") ? "th" : "td");
             tcell.addClass("tableblock");
             tcell.addClass("halign-" + cellFormat.optString("halign", "left"));
             tcell.addClass("valign-" + cellFormat.optString("valign", "top"));
-            if ( spanColumn > 1 ) {
-                tcell.attr("colspan",Integer.toString(spanColumn));
+            if (spanColumn > 1) {
+                tcell.attr("colspan", Integer.toString(spanColumn));
             }
-            if ( spanRow > 1 ) {
-                tcell.attr("rowspan",Integer.toString(spanRow));
+            if (spanRow > 1) {
+                tcell.attr("rowspan", Integer.toString(spanRow));
             }
 
             Elements content = cell.select(PARAGRAPH_BLOCK.tag());
@@ -848,41 +847,42 @@ public enum AsciidocRenderer {
                         moveChildNodes(element, tcell);
                     }
                 } else {
-                    for (Element element : content) if ( element.childNodeSize()>0 ) {
-                        Element p = new Element("p").addClass("tableblock");
-                        Element target = p;
+                    for (Element element : content)
+                        if (element.childNodeSize() > 0) {
+                            Element p = new Element("p").addClass("tableblock");
+                            Element target = p;
 
-                        if (cellFormat.optBoolean("verse")) {
-                            target.tagName("div").addClass("verse").removeClass("tableblock");
-                        }
-                        if (cellFormat.optBoolean("literal")) {
-                            target.tagName("div").addClass("literal").removeClass("tableblock");
-                            Element n = new Element("pre");
-                            target.appendChild(n);
-                            target = n;
-                        }
-                        if (cellFormat.optBoolean("em")) {
-                            Element n = new Element("em");
-                            target.appendChild(n);
-                            target = n;
-                        }
-                        if (cellFormat.optBoolean("monospace")) {
-                            Element n = new Element("code");
-                            target.appendChild(n);
-                            target = n;
-                        }
-                        if (cellFormat.optBoolean("strong")) {
-                            Element n = new Element("strong");
-                            target.appendChild(n);
-                            target = n;
-                        }
+                            if (cellFormat.optBoolean("verse")) {
+                                target.tagName("div").addClass("verse").removeClass("tableblock");
+                            }
+                            if (cellFormat.optBoolean("literal")) {
+                                target.tagName("div").addClass("literal").removeClass("tableblock");
+                                Element n = new Element("pre");
+                                target.appendChild(n);
+                                target = n;
+                            }
+                            if (cellFormat.optBoolean("em")) {
+                                Element n = new Element("em");
+                                target.appendChild(n);
+                                target = n;
+                            }
+                            if (cellFormat.optBoolean("monospace")) {
+                                Element n = new Element("code");
+                                target.appendChild(n);
+                                target = n;
+                            }
+                            if (cellFormat.optBoolean("strong")) {
+                                Element n = new Element("strong");
+                                target.appendChild(n);
+                                target = n;
+                            }
 
-                        moveChildNodes(element, target);
-                        if (target != p ) {
-                            p.appendChild(target);
+                            moveChildNodes(element, target);
+                            if (target != p) {
+                                p.appendChild(target);
+                            }
+                            tcell.appendChild(p);
                         }
-                        tcell.appendChild(p);
-                    }
                 }
             }
             trow.appendChild(tcell);
@@ -891,7 +891,7 @@ public enum AsciidocRenderer {
             while (!foundSlot) {
                 columnCounter++;
                 if (columnCounter >= columns.length()) {
-                    if ( trow != null ) {
+                    if (trow != null) {
                         if (isHead) {
                             thead.appendChild(trow);
                         } else {
@@ -947,7 +947,7 @@ public enum AsciidocRenderer {
     }
 
     public static String slugify(String s) {
-        return slugify.slugify(s.replaceAll("[\0\ufffd]","")).replace("-", "_");
+        return slugify.slugify(s.replaceAll("[\0\ufffd]", "")).replace("-", "_");
     }
 
 }

@@ -1,6 +1,5 @@
 package com.github.fluorumlabs.asciidocj;
 
-import com.github.fluorumlabs.asciidocj.impl.AsciidocBase;
 import com.github.fluorumlabs.asciidocj.impl.ParserException;
 import com.github.fluorumlabs.asciidocj.impl.jflex.AsciidocDocumentParser;
 import org.json.JSONObject;
@@ -35,15 +34,15 @@ public class AsciiDocument {
 
     public AsciiDocument with(JSONObject attributes) {
         attributes.keySet().forEach(k -> {
-            if ( !k.contains(":") && !k.contains("%") ) this.attributes.put(k, attributes.get(k));
+            if (!k.contains(":") && !k.contains("%")) this.attributes.put(k, attributes.get(k));
         });
 
         return this;
     }
 
-    public AsciiDocument with(Map<String,String> attributes) {
+    public AsciiDocument with(Map<String, String> attributes) {
         attributes.keySet().forEach(k -> {
-            if ( !k.contains(":") && !k.contains("%") ) this.attributes.put(k, attributes.get(k));
+            if (!k.contains(":") && !k.contains("%")) this.attributes.put(k, attributes.get(k));
         });
 
         return this;
@@ -67,7 +66,7 @@ public class AsciiDocument {
 
     public JSONObject getAttributesAsJSON(JSONObject json) {
         attributes.keySet().forEach(k -> {
-            if ( !k.contains(":") && !k.contains("%") ) json.put(k, attributes.get(k));
+            if (!k.contains(":") && !k.contains("%")) json.put(k, attributes.get(k));
         });
         return json;
     }
@@ -78,13 +77,13 @@ public class AsciiDocument {
 
     public Properties getAttributesAsProperties(Properties properties) {
         attributes.keySet().forEach(k -> {
-            if ( !k.contains(":") && !k.contains("%") ) properties.put(k, attributes.get(k));
+            if (!k.contains(":") && !k.contains("%")) properties.put(k, attributes.get(k));
         });
         return properties;
     }
 
     private Document parseAndGetDocument() {
-        if ( document == null ) {
+        if (document == null) {
             try {
                 document = parser.parse(asciidoc, attributes);
             } catch (ParserException e) {
