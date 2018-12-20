@@ -1,6 +1,7 @@
 package com.github.fluorumlabs.asciidocj.impl;
 
 import com.github.slugify.Slugify;
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.nodes.Document;
@@ -38,6 +39,15 @@ public enum AsciidocRenderer {
             x.appendChild(p);
             if (title != null) p.before(title);
         }
+    }),
+    ICON(x -> {
+        x.tagName("i").addClass("fa");
+        if (x.hasAttr("raw")) {
+            x.addClass(x.attr("icon"));
+        } else {
+            x.addClass("fa-" + x.attr("icon"));
+        }
+        x.removeAttr("icon").removeAttr("raw");
     }),
     PASSTHROUGH_BLOCK(x -> {
         x.after(x.text());
@@ -96,12 +106,19 @@ public enum AsciidocRenderer {
         Element tbody = new Element("tbody");
         Element tr = new Element("tr");
         Element td1 = new Element("td").addClass("icon");
-        Element div1 = html(new Element("div").addClass("title"),x.attr("text"),x.getVariables());
         Element td2 = new Element("td").addClass("content");
         table.appendChild(tbody);
         tbody.appendChild(tr);
         tr.appendChild(td1).appendChild(td2);
-        td1.appendChild(div1);
+        if ( !x.getVariables().optString("icons").equals("font")) {
+            Element div1 = html(new Element("div").addClass("title"), x.attr("text"), x.getVariables());
+            td1.appendChild(div1);
+        } else {
+            AsciidocElement icon = new AsciidocElement(AsciidocRenderer.ICON,new JSONObject(),x.getVariables());
+            icon.attr("icon","icon-"+subType).attr("raw",true);
+            icon.attr("title", x.attr("text"));
+            td1.appendChild(icon);
+        }
 
         moveChildNodes(x, td2);
         x.appendChild(table);
@@ -473,18 +490,18 @@ public enum AsciidocRenderer {
                 video = new Element("iframe")
                         .attr("src", "https://player.vimeo.com/video/" + src)
                         .attr("frameborder", "0")
-                        .attr("allowfullscreen", "");
+                        .attr("allowfullscreen", true);
                 break;
             case "youtube":
                 video = new Element("iframe")
                         .attr("src", "https://www.youtube.com/embed/" + src + "?rel=0")
                         .attr("frameborder", "0")
-                        .attr("allowfullscreen", "");
+                        .attr("allowfullscreen", true);
                 break;
             default:
                 video = new Element("video")
                         .attr("src", src)
-                        .attr("controls", "");
+                        .attr("controls", true);
                 video.append("Your browser does not support the video tag.");
                 break;
         }
@@ -500,7 +517,7 @@ public enum AsciidocRenderer {
         }
         if (x.getProperties().has("options")) {
             for (String option : x.getProperties().getJSONObject("options").keySet()) {
-                video.attr(option, "");
+                video.attr(option, true);
             }
         }
         if (x.getProperties().has("start") && x.getProperties().has("end")) {
@@ -516,7 +533,7 @@ public enum AsciidocRenderer {
 
         audio = new Element("audio")
                 .attr("src", src)
-                .attr("controls", "");
+                .attr("controls", true);
         audio.append("Your browser does not support the audio tag.");
 
         div.appendChild(audio);
@@ -524,7 +541,7 @@ public enum AsciidocRenderer {
 
         if (x.getProperties().has("options")) {
             for (String option : x.getProperties().getJSONObject("options").keySet()) {
-                audio.attr(option, "");
+                audio.attr(option, true);
             }
         }
     }),
@@ -694,10 +711,6 @@ public enum AsciidocRenderer {
             x.tagName("span");
         }
     }),
-    ICON(x -> {
-        x.tagName("i").addClass("fa").addClass("fa-"+x.attr("icon"));
-        x.removeAttr("icon");
-    }),
     TABLE_CELL(Node::remove), // Cell contents is handled by TABLE_BLOCK
     TABLE_BLOCK(x -> {
         DecimalFormat widthFormatter = new DecimalFormat("#.####");
@@ -772,8 +785,18 @@ public enum AsciidocRenderer {
             // overlay local styles
             JSONObject columnFormat = columns.getJSONObject(columnCounter);
             JSONObject cellFormat = ((AsciidocElement) cell).getProperties().getJSONObject("format");
+            boolean hasCellFormat =
+                    cellFormat.has("default")
+                    || cellFormat.has("asciidoc")
+                    || cellFormat.has("em")
+                    || cellFormat.has("header")
+                    || cellFormat.has("literal")
+                    || cellFormat.has("monospace")
+                    || cellFormat.has("strong")
+                    || cellFormat.has("verse");
             for (String key : columnFormat.keySet()) {
-                if (!cellFormat.has(key)) {
+                boolean skip = "default,asciidoc,em,header,literal,monospace,strong,verse".contains(key) && hasCellFormat;
+                if (!cellFormat.has(key) && !skip) {
                     cellFormat.put(key, columnFormat.get(key));
                 }
             }
@@ -825,35 +848,35 @@ public enum AsciidocRenderer {
                         moveChildNodes(element, tcell);
                     }
                 } else {
-                    for (Element element : content) {
+                    for (Element element : content) if ( element.childNodeSize()>0 ) {
                         Element p = new Element("p").addClass("tableblock");
                         Element target = p;
-                        if ( !cellFormat.optBoolean("default")) {
-                            if (cellFormat.optBoolean("verse")) {
-                                target.tagName("div").addClass("verse").removeClass("tableblock");
-                            }
-                            if (cellFormat.optBoolean("literal")) {
-                                target.tagName("div").addClass("literal").removeClass("tableblock");
-                                Element n = new Element("pre");
-                                target.appendChild(n);
-                                target = n;
-                            }
-                            if (cellFormat.optBoolean("em")) {
-                                Element n = new Element("em");
-                                target.appendChild(n);
-                                target = n;
-                            }
-                            if (cellFormat.optBoolean("monospace")) {
-                                Element n = new Element("code");
-                                target.appendChild(n);
-                                target = n;
-                            }
-                            if (cellFormat.optBoolean("strong")) {
-                                Element n = new Element("strong");
-                                target.appendChild(n);
-                                target = n;
-                            }
+
+                        if (cellFormat.optBoolean("verse")) {
+                            target.tagName("div").addClass("verse").removeClass("tableblock");
                         }
+                        if (cellFormat.optBoolean("literal")) {
+                            target.tagName("div").addClass("literal").removeClass("tableblock");
+                            Element n = new Element("pre");
+                            target.appendChild(n);
+                            target = n;
+                        }
+                        if (cellFormat.optBoolean("em")) {
+                            Element n = new Element("em");
+                            target.appendChild(n);
+                            target = n;
+                        }
+                        if (cellFormat.optBoolean("monospace")) {
+                            Element n = new Element("code");
+                            target.appendChild(n);
+                            target = n;
+                        }
+                        if (cellFormat.optBoolean("strong")) {
+                            Element n = new Element("strong");
+                            target.appendChild(n);
+                            target = n;
+                        }
+
                         moveChildNodes(element, target);
                         if (target != p ) {
                             p.appendChild(target);

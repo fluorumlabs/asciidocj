@@ -1,3 +1,6 @@
+////
+Works differently in Asciidoctor
+
 a::
  grandparent list item
 ab:::
@@ -7,3 +10,4 @@ abc::::
 
 +
 paragraph attached to parent list item
+////

@@ -6,7 +6,7 @@
 
     <groupId>com.github.fluorumlabs</groupId>
     <artifactId>asciidocj</artifactId>
-    <version>1.0.0-alpha3</version>
+    <version>1.0.0-beta1</version>
 
     <name>asciidocj</name>
     <description>Fast lightweight lexer-based Asciidoc to HTML/Jsoup renderer</description>
@@ -49,22 +49,22 @@
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20171018</version>
+            <version>20180813</version>
         </dependency>
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
-            <version>1.10.3</version>
+            <version>1.11.3</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>3.5</version>
+            <version>3.8.1</version>
         </dependency>
         <dependency>
             <groupId>com.github.slugify</groupId>
             <artifactId>slugify</artifactId>
-            <version>2.2</version>
+            <version>2.3</version>
         </dependency>
 
         <!-- Test dependencies -->
@@ -77,7 +77,7 @@
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.5</version>
+            <version>2.6</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

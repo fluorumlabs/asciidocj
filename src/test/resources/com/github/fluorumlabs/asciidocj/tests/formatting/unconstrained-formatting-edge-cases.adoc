@@ -2,7 +2,8 @@
 
 "`endpoints`"
 
-"``endpoints``"
+// Works differently in Asciidoctor
+// "``endpoints``"
 
 "[.code]``endpoints``" or \"``endpoints``"
 

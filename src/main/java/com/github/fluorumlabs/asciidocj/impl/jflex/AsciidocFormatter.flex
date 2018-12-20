@@ -41,6 +41,8 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 
             private Set<Pass> disabled = new HashSet<AsciidocFormatter.Pass>();
 
+            private final static Pattern ATTRIBUTE_EXTRACT_PATTERN = Pattern.compile("(\\{[A-Za-z0-9_][A-Za-z0-9_-]*\\})");
+
 
                     /**
                      * Parse the Asciidoc paragraph/block and return a resulting Document
@@ -84,7 +86,12 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
                             disabled.add(Pass.ESCAPES);
                         }
 
-                        for (String sub : attributes.optString(":subs").split(",")) {
+                        String subs = attributes.optString(":subs");
+                        subs = replaceFunctional(ATTRIBUTE_EXTRACT_PATTERN,subs,strings -> {
+                            return attributes.optString(strip(strings[1],1,1),strings[1]);
+                        });
+
+                        for (String sub : subs.split(",")) {
                             boolean add = true;
                             if ( sub.contains("-") ) {
                                 add = false;
@@ -164,8 +171,8 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
                             }
                         }
 
-                        String passString = attributes.optString(":pass","");
-                        if ( !passString.isEmpty() ) {
+                        if ( attributes.has(":pass") ) {
+                            String passString = attributes.optString(":pass","");
                             if ( !passString.contains("c") ) disabled.add(Pass.SPECIAL_CHARACTERS);
                             else disabled.remove(Pass.SPECIAL_CHARACTERS);
 
@@ -222,11 +229,22 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
                         properties = new JSONObject();
                     }
 
+                    private void appendFormatted(String text, String passMode) throws ParserException {
+                        if (formatter == null) formatter = new AsciidocFormatter();
+                        appendText("");
+                        JSONObject passAttributes = new JSONObject(attributes);
+                        passAttributes.put(":pass",passMode);
+                        appendDocument(formatter.parse(text, properties, passAttributes));
+                        properties = new JSONObject();
+                    }
+
                     private static final Pattern QUOTED_EXTRACT_PATTERN = Pattern.compile("^[\1]([\\s\\S]*?[^\\s])[\1]([^\1\\w]|$)");
                     private static final Pattern PLUS_ESCAPE_PATTERN = Pattern.compile("\\+\\+\\+([\\s\\S]+?)\\+\\+\\+");
+                    private static final Pattern PASS_ESCAPE_PATTERN = Pattern.compile("pass:[a-z]*\\[([\\s\\S]+?)\\]");
 
                     private String extractQuoted(String x, char marker) {
                         String escaped = replaceFunctional(PLUS_ESCAPE_PATTERN,x.replace(marker,'\1'),strings -> strings[0].replace('\1','\2'));
+                        escaped = replaceFunctional(PASS_ESCAPE_PATTERN,escaped,strings -> strings[0].replace('\1','\2'));
 
                         Matcher matcher = QUOTED_EXTRACT_PATTERN.matcher(escaped);
                         if (!matcher.find()) {
@@ -240,6 +258,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
 
                     private String extractUnconstrainedCode(String x) {
                         String escaped = replaceFunctional(PLUS_ESCAPE_PATTERN,x,strings -> strings[0].replace('`','\2'));
+                        escaped = replaceFunctional(PASS_ESCAPE_PATTERN,escaped,strings -> strings[0].replace('\1','\2'));
 
                         Matcher matcher = Pattern.compile(QUOTED_UNCONSTRAINED_CODE_EXTRACT_REGEXP).matcher(escaped);
                         if (!matcher.find()) {
@@ -315,7 +334,8 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 appendText(yytext().substring(2,4));
             }
 
-    "\\" [*~&#`_\\\"\'\[{]
+    "\\" [*~&#`_\\\"\'\[{] |
+    "\\" "--"
     {
         if ( fallback(Pass.ESCAPES)) break;
 
@@ -849,7 +869,7 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                     }
                 } else {
                     String value = getReplacement(id);
-                    appendText(value==null?yytext():value);
+                    appendText(value==null?"{"+id+"}":value);
                     yypushback(tail.length());
                 }
             }
@@ -1162,6 +1182,14 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 String entity = Entities.getByName(strip(yytext(), 1, 1));
                 appendText(entity.isEmpty() ? yytext() : entity);
             }
+
+    [&][#][0-9][1-9]*[;]
+    {
+                if ( fallback(Pass.REPLACEMENTS) ) break;
+
+                String entity = new String(new int[]{Integer.parseInt(strip(yytext(), 2, 1))}, 0, 1);
+                appendText(entity.isEmpty() ? yytext() : entity);
+      }
 
     /* Callouts */
     "//" {Whitespace}* "<" [1-9][0-9+]* ">" |

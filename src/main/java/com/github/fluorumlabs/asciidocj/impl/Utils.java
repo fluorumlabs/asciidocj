@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /**
  * Created by Artem Godin on 12/4/2018.
@@ -304,6 +305,15 @@ public class Utils {
         Document document = unescapeIntermediate(html, attributes);
         moveChildNodes(document.body(), parent);
         return parent;
+    }
+
+    public static String trimLeftLines(String text) {
+        String[] lines = text.split("\n");
+        int ident = Stream.of(lines).mapToInt(line -> unskipLeft(line," \t").length()).min().orElse(0);
+        for ( int i = 0; i < lines.length; i++ ) {
+            lines[i] = stripHead(lines[i],ident);
+        }
+        return String.join("\n",lines);
     }
 
 }

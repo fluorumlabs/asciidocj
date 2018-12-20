@@ -1,6 +1,10 @@
+////
+Works differently in Asciidoctor
+
 * grandparent list item
 ** parent list item
 *** child list item
 
 +
 paragraph attached to parent list item
+////

@@ -29,7 +29,7 @@ same DOM tree with exactly same classes, meaning that you can use it right away 
 <dependency>
    <groupId>com.github.fluorumlabs</groupId>
    <artifactId>asciidocj</artifactId>
-   <version>1.0.0-alpha2</version>
+   <version>1.0.0-beta1</version>
 </dependency>
 ```
 
@@ -56,6 +56,7 @@ headerFooter = false
 
 showtitle = true
 experimental = true
+skip-front-matter = true
 ```
 
 ## Limitations
@@ -66,6 +67,7 @@ experimental = true
   can't be used to create complex HTML layouts.
 - Table cells are always treated as asciidoc fragments, but only paragraphs are outputted if no `a` is specified
 - Nested tables are not supported
+- List continuation (attaching to parent) actually attaches to parent instead of some arbitrary level as in Asciidoctor
 
 ## Internals
 

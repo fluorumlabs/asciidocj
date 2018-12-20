@@ -138,7 +138,7 @@ import static com.github.fluorumlabs.asciidocj.impl.Utils.*;
      */
     private void appendFormatted(String text) throws ParserException {
         if (formatter == null) formatter = new AsciidocFormatter();
-        appendDocument(formatter.parse(trimAll(text), new JSONObject(), attributes));
+        appendDocument(formatter.parse(trimRight(text), new JSONObject(), attributes));
     }
 
     /**
@@ -681,7 +681,13 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 }
 
                 if ( id.isEmpty() && (level > 1 || !isDocumentTitle) && !attributes.has("sectids!")) {
-                    id = attributes.optString("idprefix","_") + AsciidocRenderer.slugify(formattedTitle.text()).replace("_",attributes.optString("idseparator","_"));
+                    String idBase = attributes.optString("idprefix","_") + AsciidocRenderer.slugify(formattedTitle.text()).replace("_",attributes.optString("idseparator","_"));
+                    id = idBase;
+                    int idx = 1;
+                    while ( attributes.has("anchor:"+id)) {
+                        idx++;
+                        id = String.format("%s%s%d",idBase,attributes.optString("idseparator","_"),idx);
+                    }
                     properties.put("id", id);
                 }
 
@@ -1216,7 +1222,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
     {LineFeed}* [`]{3,128} [a-z\-_]* {Whitespace}* {LineFeed} |
     {LineFeed}? [=]{1,6} {Whitespace}+ {NoLineFeed}+ {LineFeed} |
     {LineFeed}? [#]{1,6} {Whitespace}+ {NoLineFeed}+ {LineFeed} |
-    {LineFeed}* [/]{4,128} {Whitespace}* {LineFeed}
+    {LineFeed}* [-/]{4,128} {Whitespace}* {LineFeed}
     {
         if ( yytext().startsWith("if") && !yytext().contains("\n+\n")) {
             appendText(yytext());
@@ -1264,9 +1270,19 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
 }
 
 <LITERAL_PARAGRAPH> {
+    <<EOF>>
+    {
+                if (!getText().isEmpty()) {
+                    appendText(trimLeftLines(getTextAndClear()));
+                    appendTextNode();
+          }
+          return null;
+      }
+
     {LineFeed}
     {
                 if (!getText().isEmpty()) {
+                    appendText(trimLeftLines(getTextAndClear()));
                     appendTextNode();
                     closeBlockElement();
                 } else {
@@ -1283,7 +1299,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 if (!getText().isEmpty()) {
                     appendText("\n");
                 }
-                appendText(trimLeft(stripTail(yytext(), 1)));
+                appendText(stripTail(yytext(), 1));
             }
 }
 
@@ -1555,6 +1571,7 @@ CellFormat                  = {TCDuplicate}? {TCSpan}? ({TCAlign}|{TCFormat})*
                 closeElement(AsciidocRenderer.TABLE_CELL);
                 for ( int i = 1; i < duplicates; i++ ) {
                     properties = currentProperties;
+
                     tableCellCounter++;
                     openElement(AsciidocRenderer.TABLE_CELL);
                     appendSubdocument(source);
