@@ -940,7 +940,7 @@ Properties                  = "[" ("\\]"|[^\]\[])* "]"
                 }
             }
 
-   "[[" ~ "]]"
+   "[[" . ~ "]]"
     {
                 if (fallback(Pass.MACROS)) break;
 
