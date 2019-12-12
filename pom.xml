@@ -6,7 +6,7 @@
 
     <groupId>com.github.fluorumlabs</groupId>
     <artifactId>asciidocj</artifactId>
-    <version>1.0.0-beta2</version>
+    <version>1.0.0</version>
 
     <name>asciidocj</name>
     <description>Fast lightweight lexer-based Asciidoc to HTML/Jsoup renderer</description>
