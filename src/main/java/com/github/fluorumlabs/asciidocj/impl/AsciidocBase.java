@@ -141,7 +141,7 @@ public abstract class AsciidocBase {
         String text = getText();
         if (stripNewLines) text = skipRight(text, " \t\n\0");
         if (!text.isEmpty()) {
-            currentElement.appendChild(new TextNode(text, ""));
+            currentElement.appendChild(new TextNode(text));
             clearText();
         }
     }

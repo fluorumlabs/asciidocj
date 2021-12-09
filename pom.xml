@@ -40,44 +40,44 @@
         <maven.compiler.target>1.8</maven.compiler.target>
 
         <!-- Test suite is validated against this AsciidoctorJ setup -->
-        <asciidoctor.maven.plugin.version>1.5.7.1</asciidoctor.maven.plugin.version>
-        <asciidoctorj.version>1.5.8.1</asciidoctorj.version>
-        <jruby.version>9.1.17.0</jruby.version>
+        <asciidoctor.maven.plugin.version>2.2.1</asciidoctor.maven.plugin.version>
+        <asciidoctorj.version>2.5.2</asciidoctorj.version>
+        <jruby.version>9.3.2.0</jruby.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20180813</version>
+            <version>20210307</version>
         </dependency>
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
-            <version>1.11.3</version>
+            <version>1.14.3</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>3.8.1</version>
+            <version>3.12.0</version>
         </dependency>
         <dependency>
             <groupId>com.github.slugify</groupId>
             <artifactId>slugify</artifactId>
-            <version>2.3</version>
+            <version>2.5</version>
         </dependency>
 
         <!-- Test dependencies -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.11</version>
+            <version>4.13.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.6</version>
+            <version>2.11.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -87,7 +87,7 @@
             <plugin><!-- Compile jflex lexers -->
                 <groupId>de.jflex</groupId>
                 <artifactId>jflex-maven-plugin</artifactId>
-                <version>1.6.1</version>
+                <version>1.8.2</version>
                 <executions>
                     <execution>
                         <goals>
