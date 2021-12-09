@@ -145,7 +145,7 @@ public enum AsciidocRenderer {
                 }
                 moveChildNodes(x, sectionBody1);
                 if (sectionBody1.childNodeSize() == 0) {
-                    sectionBody1.appendChild(new TextNode("", ""));
+                    sectionBody1.appendChild(new TextNode(""));
                 }
                 x.appendChild(sectionBody1);
                 break;
@@ -157,7 +157,7 @@ public enum AsciidocRenderer {
                 // Move all but the first child node
                 moveChildNodesSkipFirst(x, sectionBody);
                 if (sectionBody.childNodeSize() == 0) {
-                    sectionBody.appendChild(new TextNode("", ""));
+                    sectionBody.appendChild(new TextNode(""));
                 }
                 x.appendChild(sectionBody);
                 break;
