@@ -10,8 +10,10 @@ import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.StreamSupport;
@@ -712,7 +714,7 @@ public enum AsciidocRenderer {
     }),
     TABLE_CELL(Node::remove), // Cell contents is handled by TABLE_BLOCK
     TABLE_BLOCK(x -> {
-        DecimalFormat widthFormatter = new DecimalFormat("#.####");
+        DecimalFormat widthFormatter = new DecimalFormat("#.####", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
 
         JSONArray columns = x.getProperties().optJSONArray("columns:");
         if (columns == null) {
@@ -930,7 +932,7 @@ public enum AsciidocRenderer {
     });
 
     // This entity does not exist :)
-    private static final Slugify slugify = new Slugify().withCustomReplacement("ж", "zh");
+    private static final Slugify slugify = Slugify.builder().customReplacement("ж","zh").build();
 
     private final Consumer<AsciidocElement> processor;
 
